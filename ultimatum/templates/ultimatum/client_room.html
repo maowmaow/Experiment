@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+{% load staticfiles %}
+<title>Ultimatum game - Client bidder view</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="all" />
+
+<script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
+<script src="{% static 'js/angular.js' %}"></script>
+<script src="{% static 'js/angular-cookies.js' %}"></script>
+<script src="{% static 'js/angular-resource.js' %}"></script>
+</head>
+<body ng-app="maowmaowApp">
+<section class="container" ng-controller="utClientController">
+	{% verbatim %}
+	<h3 style="float: right">{{name}}, your current earning is {{earning}}.</h3>
+	<h1>Deal or No deal</h1>
+	<ul class="list-group" ng-cloak>
+		<li class="list-group-item" ng-repeat="bid in bid_list track by $index">
+			<strong>Deal #{{$index + 1}}:</strong> Total money is {{bid.pot}}. {{bidder}} collect {{bid.pot-bid.offer}}, and offer {{receiver}} {{bid.offer}}. 
+			<span class="label label-primary" ng-if="bid.accept===true">Accepted</span>
+			<span class="label label-danger" ng-if="bid.accept===false">Rejected</span>
+			
+			<span ng-if="role=='receiver' && bid.accept==null">
+				Do you accept this offer?
+			</span>
+			<div class="btn-group" ng-if="role=='receiver' && bid.accept==null">
+				<button type="button" class="btn btn-primary" ng-click="reply(bid,true)">Accept</button>
+				<button type="button" class="btn btn-danger" ng-click="reply(bid,false)">Reject</button>
+			</div>
+		</li>
+	</ul>
+	{% endverbatim %}
+
+	{% if role == 'bidder' %}
+	{% verbatim %}
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			<h3 class="panel-title">Total money is {{pot}}. How much do you want to keep?</h3>
+		</div>
+		<div class="panel-body">
+			<form class="form-inline" ng-submit="placeBid()">
+				<label class="form-group">Collect
+					<input name="collect" type="number" class="form-control" style="width: 100px;" ng-model="collect" min="0" max="{{pot}}" />
+				</label>
+				<button class="btn btn-default" ng-disabled="bid_pending">Submit</button>
+			</form>
+		</div>
+	</div>
+	{% endverbatim %}
+	{% endif %}
+</section>
+<footer>
+	
+</footer>
+<script>
+	var maowmaowApp = angular.module('maowmaowApp', ['ngCookies','ngResource']);
+	
+	maowmaowApp.config(function($httpProvider) {
+		$httpProvider.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+	});
+	
+	maowmaowApp.run(function($http, $cookies) {
+		$http.defaults.headers.post['X-CSRFToken'] = $cookies['csrftoken'];
+		$http.defaults.headers.delete = { 'X-CSRFToken' : $cookies['csrftoken'] };
+	});
+	
+	maowmaowApp.factory('roomSvc', ['$resource', function($resource) {
+		return $resource('{% url "ultimatum:api" %}/:pk/:action');
+	}]);
+	
+	maowmaowApp.factory('bidSvc', ['$resource', function($resource) {
+		return $resource('{% url "ultimatum:api" %}/:room_pk/bid/:bid_pk');
+	}]);
+	
+	maowmaowApp.controller('utClientController', ['$scope', '$http', '$interval', 'bidSvc', function($scope, $http, $interval, bidSvc) {
+		
+		$scope.pot = {{room.pot}};
+		$scope.bidder = '{{room.bidder_alias}}';
+		$scope.receiver = '{{room.receiver_alias}}';
+		$scope.name = '{{name}}';
+		$scope.role = '{{role}}';
+		$scope.earning = 0;
+		
+		$scope.bid_pending = false;
+		
+		$scope.loadBid = function() {
+			bidSvc.query({ room_pk:{{room.pk}} }, function(value) {
+				$scope.bid_list = value;
+				$scope.bid_pending = (value[value.length-1].accept == null);
+				
+				var sum = 0;
+				for (var i=0; i<value.length; i++) {
+					if (value[i].accept === true) {
+						{% if role == 'bidder' %}
+						sum += (value[i].pot - value[i].offer);
+						{% elif role == 'receiver' %}
+						sum += value[i].offer;
+						{% endif %}
+					}
+				}
+				$scope.earning = sum;
+			});
+		};
+		
+		$scope.placeBid = function() {
+			var offer = $scope.pot - $scope.collect; 
+			bidSvc.save({ room_pk:{{room.pk}} }, {offer:offer}, function(value) {
+				$scope.loadBid();
+			});
+		};
+		
+		$scope.reply = function(bid, accept) {
+			bidSvc.save({ room_pk:{{room.pk}}, bid_pk:bid.pk }, {accept:accept}, function(value) {
+				$scope.loadBid();
+			});
+		};
+		
+		$interval(function() { $scope.loadBid(); }, 200);
+	}]);
+</script>
+</body>
+</html>
