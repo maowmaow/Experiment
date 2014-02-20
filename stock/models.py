@@ -2,7 +2,8 @@ from django.db import models
 from json.encoder import JSONEncoder
 
 class Game(models.Model):
-    start = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=500)
+    start = models.DateTimeField(blank=True, null=True)
     end = models.DateTimeField(blank=True, null=True)
     
     class Meta:
@@ -10,7 +11,10 @@ class Game(models.Model):
 
 class Stock(models.Model):
     name = models.CharField(max_length=10)
-    price = models.DecimalField(decimal_places=2, max_digits=12)
+    init_price = models.DecimalField(decimal_places=2, max_digits=12)
+    init_qty = models.PositiveIntegerField(default=0)
+    last_price = models.DecimalField(decimal_places=2, max_digits=12)
+    
     
     class Meta:
         ordering = ['name']
@@ -20,13 +24,16 @@ class StockEncoder(JSONEncoder):
         if isinstance(obj, Stock):
             return dict(pk=obj.pk,
                         name=obj.name,
-                        price=str(obj.price))
+                        init_price=str(obj.init_price),
+                        init_qty=obj.init_qty,
+                        last_price=str(obj.last_price),
+                        )
         return JSONEncoder.default(self, obj)    
 
 class Portfolio(models.Model):
     game = models.ForeignKey(Game)
     name = models.CharField(max_length=50)
-    session = models.CharField(max_length=120, blank=True)
+    password = models.CharField(max_length=50, blank=True)
     cash = models.DecimalField(decimal_places=2, max_digits=12)
     
     class Meta:

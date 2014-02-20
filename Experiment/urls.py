@@ -14,5 +14,6 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     # url(r'^admin/', include(admin.site.urls)),
-    url(r'^ultimatum/', include('ultimatum.urls', namespace='ultimatum'))
+    url(r'^stock/', include('stock.urls', namespace='stock')),
+    url(r'^ultimatum/', include('ultimatum.urls', namespace='ultimatum')),
 )

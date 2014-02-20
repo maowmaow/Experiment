@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+{% load staticfiles %}
+<title>Stock trading game - Admin view</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="all" />
+
+<script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
+<script src="{% static 'js/angular.min.js' %}"></script>
+<script src="{% static 'js/angular-cookies.min.js' %}"></script>
+<script src="{% static 'js/angular-resource.min.js' %}"></script>
+<script src="{% static 'stock/js/app-stock.js' %}"></script>
+</head>
+<body ng-app="ultimatumApp">
+<header>
+	{% csrf_token %}
+</header>
+<section class="container" ng-controller="utAdminController">
+	<h1>Welcome to Stock Trading game!</h1>
+	<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_create' %}" class="btn btn-default">Create New Game</a></div>
+	<h4>Current Game Settings</h4>
+{% verbatim %}
+	<div class="row">
+		<div class="col-md-5">
+			<form class="form-inline" role="form">
+			<h4>Stock List</h4>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>#</th>						
+						<th>Stock Name</th>						
+						<th>Initial Price</th>
+						<th>Amount per user</th>						
+					</tr>
+				</thead>
+				<tbody>
+					<tr ng-repeat="s in stock_list">
+						<td>{{$index}}</td>
+						<td>{{s.name}}</td>
+						<td>{{s.init_price}}</td>
+						<td>{{s.init_qty}}</td>
+					</tr>
+				</tbody>
+			</table>
+			</form>
+		</div>
+		<div class="col-md-5">
+			<form class="form-inline" role="form">
+			<h4>User List</h4>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>#</th>						
+						<th>Email</th>						
+						<th>Password</th>
+						<th>Cash</th>						
+					</tr>
+				</thead>
+				<tbody>
+					<tr ng-repeat="p in portfolio_list">
+						<td>{{$index}}</td>
+						<td>{{p.name}}</td>
+						<td>{{p.session}}</td>
+						<td>{{p.cash}}</td>
+					</tr>
+				</tbody>
+			</table>
+			</form>
+		</div>
+		<div class="col-md-2">
+			<p><button class="btn btn-lg btn-primary">Start Game</button></p>
+			<p><button class="btn btn-lg btn-danger">End Game</button></p>
+		</div>
+	</div>
+{% endverbatim %}
+</section>
+<footer>
+	
+</footer>
+<script>
+ultimatumApp.controller('utAdminController', ['$scope', '$http', 'roomSvc', function($scope, $http, roomSvc) {
+	$scope.loadRoom = function(pageNo) {
+		$scope.room_list = roomSvc.query();
+	};
+
+	$scope.createRoom = function() {
+		roomSvc.save({}, { name: $scope.name }, function() {
+			$scope.loadRoom();
+		});
+	};
+	
+	$scope.deleteRoom = function(room) {
+		roomSvc.delete({ room_pk:room.pk }, null, function(value, headers) {
+			$scope.loadRoom();
+		});
+	};
+	
+	$scope.loadRoom();
+	
+}]);
+</script>
+</body>
+</html>

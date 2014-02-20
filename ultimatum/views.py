@@ -4,10 +4,9 @@ from django.db.models.query_utils import Q
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic.base import View
-from ultimatum.models import Room, RoomEncoder, Bid, BidEncoder
 from django.core.urlresolvers import resolve, reverse
-from django.http.response import HttpResponseForbidden, HttpResponseBadRequest,\
-    HttpResponseNotFound
+from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
+from ultimatum.models import Room, RoomEncoder, Bid, BidEncoder
 
 class IndexView(View):
     template_name = 'ultimatum/index.html'
