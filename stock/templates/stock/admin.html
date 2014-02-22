@@ -18,9 +18,11 @@
 </header>
 <section class="container" ng-controller="utAdminController">
 	<h1>Welcome to Stock Trading game!</h1>
+	{% if game == None %}
 	<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_create' %}" class="btn btn-default">Create New Game</a></div>
+	{% else %}
 	<h4>Current Game Settings</h4>
-{% verbatim %}
+	{% verbatim %}
 	<div class="row">
 		<div class="col-md-5">
 			<form class="form-inline" role="form">
@@ -73,7 +75,8 @@
 			<p><button class="btn btn-lg btn-danger">End Game</button></p>
 		</div>
 	</div>
-{% endverbatim %}
+	{% endverbatim %}
+	{% endif %}
 </section>
 <footer>
 	

@@ -8,5 +8,6 @@ urlpatterns = patterns('',
     url(r'^client/portfolio$', ClientPortfolioView.as_view(), name='client_portfolio'),
     url(r'^admin$', AdminView.as_view(), name='admin'),
     url(r'^admin/create$', AdminCreateView.as_view(), name='admin_create'),
-      
+    
+    url(r'^api/admin/stock$', AdminStockApiView.as_view(), name='api_admin_stock'),  
 )

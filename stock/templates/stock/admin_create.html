@@ -12,40 +12,52 @@
 <script src="{% static 'js/angular-resource.min.js' %}"></script>
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
 </head>
-<body ng-app="ultimatumApp">
+<body ng-app="stockApp">
 <header>
 	{% csrf_token %}
 </header>
 {% verbatim %}
-<section class="container" ng-controller="utAdminController">
+<section class="container">
 	<h1>Create New Game</h1>
 	<div class="row">
-		<div class="col-md-6">
-			<form class="form-inline" role="form">
+		<div class="col-md-6" ng-controller="stockAdminController">
 			<h4>Stock List</h4>
+			<form class="form-inline" role="form" ng-submit="saveStock()">
 			<table class="table">
 				<thead>
 					<tr>
 						<th>#</th>						
 						<th>Stock Name</th>						
 						<th>Initial Price</th>
-						<th>Amount per user</th>						
+						<th>Amount per user</th>
+						<th></th>				
 					</tr>
 				</thead>
 				<tbody>
-					<tr ng-repeat="s in stock_list">
-						<td>{{$index}}</td>
+					<tr ng-repeat="s in stock_list track by s.pk">
+						<td>{{$index + 1}}</td>
 						<td>{{s.name}}</td>
 						<td>{{s.init_price}}</td>
 						<td>{{s.init_qty}}</td>
+						<td><a href="#null" ng-click="startEdit(s)">Edit</a></td>
 					</tr>
 				</tbody>
 				<tfoot>
-					<tr>
-						<th colspan="2" class="text-right">Reset all value</th>
-						<td><input class="form-control" placeholder="Price" style="width:90px" /></td>
-						<td><input class="form-control" placeholder="QTY" style="width:90px" />
-							<button class="btn btn-default">Update</button></td>
+					<tr ng-show="editStock == null">
+						<td></td>
+						<td><input class="form-control" ng-model="createStock.name" placeholder="Name" style="width:90px" /></td>
+						<td><input class="form-control" ng-model="createStock.init_price" placeholder="Price" style="width:90px" /></td>
+						<td><input class="form-control" ng-model="createStock.init_qty" placeholder="QTY" style="width:90px" />
+							<button class="btn btn-default">Create</button></td>
+					</tr>
+					<tr ng-show="editStock != null">
+						<td></td>
+						<td><input class="form-control" ng-model="editStock.name" placeholder="Name" style="width:90px" /></td>
+						<td><input class="form-control" ng-model="editStock.init_price" placeholder="Price" style="width:90px" /></td>
+						<td><input class="form-control" ng-model="editStock.init_qty" placeholder="QTY" style="width:90px" />
+							<button class="btn btn-default">Update</button>
+							<button class="btn btn-default" type="button" ng-click="editStock=null">Cancel</button>
+						</td>
 					</tr>
 				</tfoot>
 			</table>
@@ -72,7 +84,14 @@
 					</tr>
 				</tbody>
 				<tfoot>
-					<tr>
+					<tr ng-show="editStock == null">
+						<td></td>
+						<td><input class="form-control" placeholder="Name" style="width:90px" /></td>
+						<td><input class="form-control" placeholder="Password" style="width:90px" /></td>
+						<td><input class="form-control" placeholder="Cash" style="width:90px" />
+							<button class="btn btn-default">Create</button></td>
+					</tr>
+					<tr ng-show="editStock != null">
 						<td></td>
 						<td><input class="form-control" placeholder="Name" style="width:90px" /></td>
 						<td><input class="form-control" placeholder="Password" style="width:90px" /></td>
@@ -91,24 +110,42 @@
 	
 </footer>
 <script>
-ultimatumApp.controller('utAdminController', ['$scope', '$http', 'roomSvc', function($scope, $http, roomSvc) {
-	$scope.loadRoom = function(pageNo) {
-		$scope.room_list = roomSvc.query();
+stockApp.controller('stockAdminController', ['$scope', '$http', 'stockSvc', function($scope, $http, stockSvc) {
+	
+	$scope.createStock = {};
+	$scope.editStock = null;
+	
+	$scope.loadStock = function() {
+		stockSvc.query(null, function(value) {
+			$scope.stock_list = value;	
+		});
+	};
+	
+	$scope.startEdit = function(stock) {
+		$scope.editStock = stock;
 	};
 
-	$scope.createRoom = function() {
-		roomSvc.save({}, { name: $scope.name }, function() {
-			$scope.loadRoom();
+	$scope.saveStock = function() {
+		if ($scope.editStock != null) {
+			stockSvc.save({}, $scope.editStock, function() {
+				$scope.loadStock();
+				$scope.editStock = null;
+			});
+		} else {
+			stockSvc.save({}, $scope.createStock, function() {
+				$scope.loadStock();
+				$scope.createStock = {};
+			});	
+		}
+	};
+	
+	$scope.deleteStock = function(stock) {
+		stockSvc.delete({ stock_pk:stock.pk }, null, function(value, headers) {
+			$scope.loadStock();
 		});
 	};
 	
-	$scope.deleteRoom = function(room) {
-		roomSvc.delete({ room_pk:room.pk }, null, function(value, headers) {
-			$scope.loadRoom();
-		});
-	};
-	
-	$scope.loadRoom();
+	$scope.loadStock();
 	
 }]);
 </script>

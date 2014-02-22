@@ -1,10 +1,22 @@
 from django.db import models
 from json.encoder import JSONEncoder
 
+class GameManager(models.Manager):
+    def get_query_set(self):
+        return models.Manager.get_query_set(self)
+    
+    def get_active_game(self):
+        active_game = self.get_query_set().filter(end__isnull=True)
+        if len(active_game) > 0:
+            return active_game[0]
+        return None
+
 class Game(models.Model):
     description = models.CharField(max_length=500)
     start = models.DateTimeField(blank=True, null=True)
     end = models.DateTimeField(blank=True, null=True)
+    
+    objects = GameManager()
     
     class Meta:
         ordering = ['pk']
@@ -13,8 +25,7 @@ class Stock(models.Model):
     name = models.CharField(max_length=10)
     init_price = models.DecimalField(decimal_places=2, max_digits=12)
     init_qty = models.PositiveIntegerField(default=0)
-    last_price = models.DecimalField(decimal_places=2, max_digits=12)
-    
+    last_price = models.DecimalField(decimal_places=2, max_digits=12, default=0)
     
     class Meta:
         ordering = ['name']
