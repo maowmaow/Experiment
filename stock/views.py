@@ -6,7 +6,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic.base import View
 from django.core.urlresolvers import resolve, reverse
 from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
-from stock.models import Game, Stock, StockEncoder
+from stock.models import Game, Stock, StockEncoder, Portfolio, PortfolioEncoder
+from decimal import Decimal
 
 class IndexView(View):
     template_name = 'stock/index.html'
@@ -21,11 +22,15 @@ class AdminView(View):
         game = Game.objects.get_active_game()
         return render(request, self.template_name, {'game':game})
     
-class AdminCreateView(View):
-    template_name = 'stock/admin_create.html'
+class AdminConfigView(View):
+    template_name = 'stock/admin_config.html'
     
     def get(self, request):
-        return render(request, self.template_name)
+        game = Game.objects.get_active_game()
+        if game and game.start:
+            return HttpResponseBadRequest()
+        
+        return render(request, self.template_name, {'game':game})
 
 class AdminStockApiView(View):
     def get(self, request):
@@ -47,8 +52,39 @@ class AdminStockApiView(View):
         return HttpResponse('success')
 
 class AdminPortfolioApiView(View):
+    
     def get(self, request):
-        pass
+        game = Game.objects.get_active_game()
+        if game:
+            portfolio_list = list(game.portfolio_set.all())
+        else:
+            portfolio_list = []
+        
+        return HttpResponse(json.dumps(portfolio_list, cls=PortfolioEncoder))
+
+    def post(self, request, portfolio_pk=None):
+        game = Game.objects.get_active_game()
+        if game and game.start:
+            return HttpResponseBadRequest()
+
+        if not game:
+            game = Game()
+            game.save()
+        
+        data = json.loads(request.body)
+        if portfolio_pk:
+            portfolio = get_object_or_404(Portfolio,pk=portfolio_pk);
+            if portfolio.game != game:
+                return HttpResponseBadRequest()
+        else:
+            portfolio = Portfolio()
+            portfolio.game = game
+
+        portfolio.name = data["name"]
+        portfolio.password = data["password"]
+        portfolio.cash = Decimal(data["cash"])
+        portfolio.save()
+        return HttpResponse('success')
 
 class MarketView(View):
     template_name = 'stock/market.html'

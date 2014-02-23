@@ -7,7 +7,9 @@ urlpatterns = patterns('',
     url(r'^client$', ClientView.as_view(), name='client'),
     url(r'^client/portfolio$', ClientPortfolioView.as_view(), name='client_portfolio'),
     url(r'^admin$', AdminView.as_view(), name='admin'),
-    url(r'^admin/create$', AdminCreateView.as_view(), name='admin_create'),
+    url(r'^admin/config$', AdminConfigView.as_view(), name='admin_config'),
     
-    url(r'^api/admin/stock$', AdminStockApiView.as_view(), name='api_admin_stock'),  
+    url(r'^api/admin/stock$', AdminStockApiView.as_view(), name='api_admin_stock'),
+    url(r'^api/admin/portfolio$', AdminPortfolioApiView.as_view(), name='api_admin_portfolio'),
+    url(r'^api/admin/portfolio/(?P<portfolio_pk>\d+)$', AdminPortfolioApiView.as_view(), name='api_admin_portfolio_item'),  
 )

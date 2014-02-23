@@ -12,18 +12,18 @@
 <script src="{% static 'js/angular-resource.min.js' %}"></script>
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
 </head>
-<body ng-app="ultimatumApp">
+<body ng-app="stockApp">
 <header>
 	{% csrf_token %}
 </header>
-<section class="container" ng-controller="utAdminController">
+<section class="container">
 	<h1>Welcome to Stock Trading game!</h1>
 	{% if game == None %}
-	<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_create' %}" class="btn btn-default">Create New Game</a></div>
+	<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_config' %}" class="btn btn-default">Create New Game</a></div>
 	{% else %}
-	<h4>Current Game Settings</h4>
+	<h4>Current Game Settings <small><a href="{% url 'stock:admin_config' %}">Edit</a></small></h4>
 	{% verbatim %}
-	<div class="row">
+	<div class="row" ng-controller="adminController">
 		<div class="col-md-5">
 			<form class="form-inline" role="form">
 			<h4>Stock List</h4>
@@ -33,15 +33,15 @@
 						<th>#</th>						
 						<th>Stock Name</th>						
 						<th>Initial Price</th>
-						<th>Amount per user</th>						
+						<th>Initial qty per user</th>						
 					</tr>
 				</thead>
 				<tbody>
 					<tr ng-repeat="s in stock_list">
 						<td>{{$index}}</td>
 						<td>{{s.name}}</td>
-						<td>{{s.init_price}}</td>
-						<td>{{s.init_qty}}</td>
+						<td>{{s.init_price|currency}}</td>
+						<td>{{s.init_qty|number}}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -63,16 +63,16 @@
 					<tr ng-repeat="p in portfolio_list">
 						<td>{{$index}}</td>
 						<td>{{p.name}}</td>
-						<td>{{p.session}}</td>
-						<td>{{p.cash}}</td>
+						<td>{{p.password}}</td>
+						<td>{{p.cash|number}}</td>
 					</tr>
 				</tbody>
 			</table>
 			</form>
 		</div>
 		<div class="col-md-2">
-			<p><button class="btn btn-lg btn-primary">Start Game</button></p>
-			<p><button class="btn btn-lg btn-danger">End Game</button></p>
+			<p><button type="button" ng-click="startGame()" class="btn btn-lg btn-primary">Start Game</button></p>
+			<p><button type="button" ng-click="stopGame()" class="btn btn-lg btn-danger">End Game</button></p>
 		</div>
 	</div>
 	{% endverbatim %}
@@ -82,24 +82,29 @@
 	
 </footer>
 <script>
-ultimatumApp.controller('utAdminController', ['$scope', '$http', 'roomSvc', function($scope, $http, roomSvc) {
-	$scope.loadRoom = function(pageNo) {
-		$scope.room_list = roomSvc.query();
+stockApp.controller('adminController', ['$scope', '$http', '$window', 'stockSvc', 'portfolioSvc', function($scope, $http, $window, stockSvc, portfolioSvc) {
+	$scope.loadStock = function() {
+		stockSvc.query(null, function(value) {
+			$scope.stock_list = value;	
+		});
 	};
 
-	$scope.createRoom = function() {
-		roomSvc.save({}, { name: $scope.name }, function() {
-			$scope.loadRoom();
+	$scope.loadPortfolio = function() {
+		portfolioSvc.query(null, function(value) {
+			$scope.portfolio_list = value;
 		});
 	};
 	
-	$scope.deleteRoom = function(room) {
-		roomSvc.delete({ room_pk:room.pk }, null, function(value, headers) {
-			$scope.loadRoom();
-		});
+	$scope.startGame = function() {
+		$window.open("{% url 'stock:market' %}");
 	};
 	
-	$scope.loadRoom();
+	$scope.stopGame = function() {
+		
+	};
+	
+	$scope.loadStock();
+	$scope.loadPortfolio();
 	
 }]);
 </script>

@@ -14,6 +14,6 @@ stockApp.factory('stockSvc', ['$resource', function($resource) {
 	return $resource('/stock/api/admin/stock/:stock_pk');
 }]);
 
-stockApp.factory('bidSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/:room_pk/bid/:bid_pk');
+stockApp.factory('portfolioSvc', ['$resource', function($resource) {
+	return $resource('/stock/api/admin/portfolio/:portfolio_pk');
 }]);

@@ -12,7 +12,6 @@ class GameManager(models.Manager):
         return None
 
 class Game(models.Model):
-    description = models.CharField(max_length=500)
     start = models.DateTimeField(blank=True, null=True)
     end = models.DateTimeField(blank=True, null=True)
     
@@ -49,6 +48,16 @@ class Portfolio(models.Model):
     
     class Meta:
         ordering = ['name']
+        
+class PortfolioEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Portfolio):
+            return dict(pk=obj.pk,
+                        name=obj.name,
+                        password=obj.password,
+                        cash=str(obj.cash),
+                        )
+        return JSONEncoder.default(self, obj)
 
 class PortfolioDetail(models.Model):
     portfolio = models.ForeignKey(Portfolio)
@@ -72,3 +81,6 @@ class Order(models.Model):
     
     class Meta:
         ordering = ['pk']
+
+class Transaction(models.Model):
+    pass
