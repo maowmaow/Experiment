@@ -13,9 +13,6 @@
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
 </head>
 <body ng-app="stockApp">
-<header>
-	{% csrf_token %}
-</header>
 <section class="container">
 	<h1>Welcome to Stock Trading game!</h1>
 	{% if game == None %}
@@ -82,7 +79,7 @@
 	
 </footer>
 <script>
-stockApp.controller('adminController', ['$scope', '$http', '$window', 'stockSvc', 'portfolioSvc', function($scope, $http, $window, stockSvc, portfolioSvc) {
+stockApp.controller('adminController', ['$scope', '$http', '$window', 'stockSvc', 'portfolioSvc', 'gameSvc', function($scope, $http, $window, stockSvc, portfolioSvc, gameSvc) {
 	$scope.loadStock = function() {
 		stockSvc.query(null, function(value) {
 			$scope.stock_list = value;	
@@ -96,11 +93,15 @@ stockApp.controller('adminController', ['$scope', '$http', '$window', 'stockSvc'
 	};
 	
 	$scope.startGame = function() {
-		$window.open("{% url 'stock:market' %}");
+		gameSvc.save({action:'start'}, null, function(value) {
+			$window.open("{% url 'stock:market' %}");
+		});
 	};
 	
 	$scope.stopGame = function() {
-		
+		gameSvc.save({action:'end'}, null, function(value) {
+			$window.location.reload();
+		});
 	};
 	
 	$scope.loadStock();

@@ -12,42 +12,41 @@
 <script src="{% static 'js/angular-resource.min.js' %}"></script>
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
 </head>
-<body>
-{% verbatim %}
-<section class="container" ng-controller="utClientController">
-	<h1>Portfolio: {{name}}</h1>
+<body ng-app="stockApp">
+<section class="container" ng-controller="stockClientController">
+	<h1>Portfolio: {{portfolio.name}}</h1>
+	{% verbatim %}
 	<div class="row">
 		<div class="col-md-6">
 			<form role="form" class="form">
 				<div class="panel panel-default">
 					<div class="panel-heading">
+						<p class="pull-right">Current Cash: {{cash|currency}}</p>
 						<h3 class="panel-title">Place your order</h3>
 					</div>
-					<div class="panel-body">
-						<div class="form-group">
-							<label class="radio-inline"><input type="radio" checked /> Buy</label>
-							<label class="radio-inline"><input type="radio" /> Sell</label>
-						</div>
-						<div class="row">
-							<div class="col-md-4">
-								<div class="form-group">
-									<label>Price</label>
-									<input name="price" placeholder="Price" type="number" class="form-control" style="width:100px" />
-									<div class="radio"><label><input type="radio" checked /> Limit</label></div>
-									<div class="radio"><label><input type="radio" /> Market Price</label></div>
-								</div>
-							</div>
-							<div class="col-md-4">
-								<div class="form-group">
-									<label>Quantity</label>
-									<input name="qty" placeholder="QTY" type="number" class="form-control" style="width:100px" />
-								</div>
-							</div>
-							<div class="col-md-4">
-									<button class="btn btn-default">Submit</button>
-							</div>
-						</div>
-					</div>
+						<table class="table" style="margin-bottom:0">
+							<thead>
+								<tr><th>Stock</th><th>Price</th><th>Quantity</th><th></th></tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td><div class="form-group">
+											<input name="stock" placeholder="Stock" class="form-control" style="width:100px" />
+											<div class="radio"><label><input type="radio" checked /> Buy</label></div>
+											<div class="radio"><label><input type="radio" /> Sell</label></div>
+										</div>
+									</td>
+									<td><div class="form-group">
+											<input name="price" placeholder="Price" type="number" class="form-control" style="width:100px" />
+											<div class="radio"><label><input type="radio" checked /> Limit</label></div>
+											<div class="radio"><label><input type="radio" /> Market Price</label></div>
+										</div>
+									</td>
+									<td><input name="qty" placeholder="QTY" type="number" class="form-control" style="width:100px" /></td>
+									<td><button class="btn btn-default">Submit</button></td>
+								</tr>
+							</tbody>
+						</table>
 				</div>
 			</form>
 			
@@ -81,7 +80,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					<tr ng-repeat="d in portfolio_detail_list">
+					<tr ng-repeat="d in details_list">
 						<td>{{d.stock}}</td>
 						<td>{{d.price}}</td>
 						<td>{{d.qty}}</td>
@@ -90,14 +89,25 @@
 			</table>
 		</div>
 	</div>
+	{% endverbatim %}
 </section>
-{% endverbatim %}
 <footer>
 	
 </footer>
 <script>
-ultimatumApp.controller('utClientController', ['$scope', '$http', '$window', 'roomSvc', function($scope, $http, $window, roomSvc) {
+stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$interval', 'clientSvc', function($scope, $http, $window, $interval, clientSvc) {
 
+	$scope.poll_rate = 2000;
+	
+	$scope.loadData = function() {
+		clientSvc.get(null, function(value) {
+			$scope.cash = value.cash;
+			$scope.order_list = value.order;
+			$scope.details_list = value.details;
+		});
+	}
+	
+	$interval(function() { $scope.loadData(); }, $scope.poll_rate);
 }]);
 </script>
 </body>

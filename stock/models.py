@@ -1,5 +1,6 @@
-from django.db import models
+from django.db import models, transaction
 from json.encoder import JSONEncoder
+import datetime
 
 class GameManager(models.Manager):
     def get_query_set(self):
@@ -19,6 +20,26 @@ class Game(models.Model):
     
     class Meta:
         ordering = ['pk']
+    
+    @transaction.commit_on_success
+    def start_game(self):
+        if self.start is None and self.end is None:
+            for p in self.portfolio_set.all():
+                for s in Stock.objects.all():
+                    pd = PortfolioDetail()
+                    pd.portfolio = p
+                    pd.stock = s
+                    pd.price = s.init_price
+                    pd.qty = s.init_qty
+                    pd.save()
+                
+            self.start = datetime.datetime.now()
+            self.save()
+    
+    def end_game(self):
+        if self.start and self.end is None:
+            self.end = datetime.datetime.now()
+            self.save()
 
 class Stock(models.Model):
     name = models.CharField(max_length=10)
@@ -59,9 +80,35 @@ class PortfolioEncoder(JSONEncoder):
                         )
         return JSONEncoder.default(self, obj)
 
+class ClientPortfolioEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Portfolio):
+            return dict(pk=obj.pk,
+                        cash=str(obj.cash),
+                        details=list(obj.portfoliodetail_set.all()),
+                        order = list(obj.order_set.all()),
+                        )
+        elif isinstance(obj, PortfolioDetail):
+            return dict(pk=obj.pk,
+                        stock=obj.stock.name,
+                        price=str(obj.price),
+                        qty=obj.qty,
+                        )
+        elif isinstance(obj, Order):
+            return dict(pk=obj.pk,
+                        type=obj.get_type_display(),
+                        stock=obj.stock.name,
+                        price=str(obj.price),
+                        qty=obj.qty,
+                        match=obj.match,
+                        created=obj.created,
+                        )
+        return JSONEncoder.default(self, obj)
+
 class PortfolioDetail(models.Model):
     portfolio = models.ForeignKey(Portfolio)
     stock = models.ForeignKey(Stock)
+    price = models.DecimalField(decimal_places=2, max_digits=12)
     qty = models.PositiveIntegerField(default=0)
     
     class Meta:
@@ -74,13 +121,20 @@ class Order(models.Model):
         
     portfolio = models.ForeignKey(Portfolio)
     type = models.SmallIntegerField(choices=TYPE_CHOICES)
+    stock = models.ForeignKey(Stock)
     price = models.DecimalField(decimal_places=2, max_digits=12)
     qty = models.PositiveIntegerField(default=0)
-    match = models.BooleanField(default=False)
+    match = models.PositiveIntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['pk']
 
 class Transaction(models.Model):
-    pass
+    game = models.ForeignKey(Game)
+    stock = models.ForeignKey(Stock)
+    seller = models.ForeignKey(Order, limit_choices_to={'type':Order.SELL}, related_name='+')
+    buyer = models.ForeignKey(Order, limit_choices_to={'type':Order.BUY}, related_name='+')
+    price = models.DecimalField(decimal_places=2, max_digits=12)
+    qty = models.PositiveIntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True) 

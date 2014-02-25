@@ -6,14 +6,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic.base import View
 from django.core.urlresolvers import resolve, reverse
 from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
-from stock.models import Game, Stock, StockEncoder, Portfolio, PortfolioEncoder
+from stock.models import Game, Stock, StockEncoder, Portfolio, PortfolioEncoder,\
+    ClientPortfolioEncoder
 from decimal import Decimal
 
 class IndexView(View):
     template_name = 'stock/index.html'
     
     def get(self, request):
-        return render(request, self.template_name)
+        game = Game.objects.get_active_game()
+        return render(request, self.template_name, {'game':game})
     
 class AdminView(View):
     template_name = 'stock/admin.html'
@@ -21,7 +23,7 @@ class AdminView(View):
     def get(self, request):
         game = Game.objects.get_active_game()
         return render(request, self.template_name, {'game':game})
-    
+
 class AdminConfigView(View):
     template_name = 'stock/admin_config.html'
     
@@ -86,6 +88,21 @@ class AdminPortfolioApiView(View):
         portfolio.save()
         return HttpResponse('success')
 
+class AdminGameApiView(View):
+    def post(self, request, action):
+        game = Game.objects.get_active_game()
+        if not game:
+            return HttpResponseBadRequest()
+        
+        if action == 'start':
+            game.start_game()
+        elif action == 'end':
+            game.end_game()
+        else:
+            return HttpResponseBadRequest()
+        
+        return HttpResponse('success')
+        
 class MarketView(View):
     template_name = 'stock/market.html'
 
@@ -99,18 +116,32 @@ class ClientView(View):
         return render(request, self.template_name, { })
 
     def post(self, request):
-        name = request.POST.get('name')
-        request.session['name'] = name
-        return redirect('ultimatum:client_lobby')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        game = Game.objects.get_active_game()
+        if not game:
+            return redirect(reverse('stock:index'))
+
+        port_list = Portfolio.objects.filter(game=game).filter(name=email).filter(password=password)
+        if len(port_list) == 0:
+            return render(request, self.template_name, { 'error': 'username and/or password is incorrect.' });
+        
+        request.session['portfolio_id'] = port_list[0].pk 
+        return redirect('stock:client_portfolio')
 
 class ClientPortfolioView(View):
     template_name = 'stock/client_portfolio.html'
     
     def get(self, request):
-        return render(request, self.template_name, { })
+        portfolio_id = request.session['portfolio_id']
+        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+            
+        return render(request, self.template_name, { 'portfolio':portfolio })
 
-    def post(self, request):
-        name = request.POST.get('name')
-        request.session['name'] = name
-        return redirect('ultimatum:client_lobby')
+class ClientPortfolioApiView(View):
+    def get(self, request):
+        portfolio_id = request.session['portfolio_id']
+        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
 
+        return HttpResponse(json.dumps(portfolio, cls=ClientPortfolioEncoder))

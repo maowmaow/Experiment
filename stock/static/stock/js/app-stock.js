@@ -17,3 +17,11 @@ stockApp.factory('stockSvc', ['$resource', function($resource) {
 stockApp.factory('portfolioSvc', ['$resource', function($resource) {
 	return $resource('/stock/api/admin/portfolio/:portfolio_pk');
 }]);
+
+stockApp.factory('gameSvc', ['$resource', function($resource) {
+	return $resource('/stock/api/admin/game/:action');
+}]);
+
+stockApp.factory('clientSvc', ['$resource', function($resource) {
+	return $resource('/stock/api/client/portfolio');
+}]);
