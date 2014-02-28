@@ -6,8 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic.base import View
 from django.core.urlresolvers import resolve, reverse
 from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
-from stock.models import Game, Stock, StockEncoder, Portfolio, PortfolioEncoder,\
-    ClientPortfolioEncoder
+from stock.models import Game, Portfolio, StockEncoder
 from decimal import Decimal
 
 class IndexView(View):
@@ -34,58 +33,28 @@ class AdminConfigView(View):
         
         return render(request, self.template_name, {'game':game})
 
-class AdminStockApiView(View):
+class AdminApiView(View):
     def get(self, request):
-        stock_list = Stock.objects.all()
-        return HttpResponse(json.dumps(list(stock_list), cls=StockEncoder))
+        game_list = Game.objects.all()
+        return HttpResponse(json.dumps(list(game_list), cls=StockEncoder))
     
     def post(self, request):
         data = json.loads(request.body)
 
         if 'pk' in data:
-            s = get_object_or_404(Stock, pk=data["pk"])
+            game = get_object_or_404(Game, pk=data["pk"])
         else: 
-            s = Stock()
-
-        s.name = data["name"]
-        s.init_price = data["init_price"]
-        s.init_qty = data["init_qty"]
-        s.save()
-        return HttpResponse('success')
-
-class AdminPortfolioApiView(View):
-    
-    def get(self, request):
-        game = Game.objects.get_active_game()
-        if game:
-            portfolio_list = list(game.portfolio_set.all())
-        else:
-            portfolio_list = []
-        
-        return HttpResponse(json.dumps(portfolio_list, cls=PortfolioEncoder))
-
-    def post(self, request, portfolio_pk=None):
-        game = Game.objects.get_active_game()
-        if game and game.start:
-            return HttpResponseBadRequest()
-
-        if not game:
             game = Game()
-            game.save()
-        
-        data = json.loads(request.body)
-        if portfolio_pk:
-            portfolio = get_object_or_404(Portfolio,pk=portfolio_pk);
-            if portfolio.game != game:
-                return HttpResponseBadRequest()
-        else:
-            portfolio = Portfolio()
-            portfolio.game = game
 
-        portfolio.name = data["name"]
-        portfolio.password = data["password"]
-        portfolio.cash = Decimal(data["cash"])
-        portfolio.save()
+        if game.state != Game.READY:
+            return HttpResponseBadRequest()
+        
+        game.password = data["password"]
+        game.init_price = data["init_price"]
+        game.init_qty = data["init_qty"]
+        game.init_cash = data["init_cash"]
+        game.period = data["period"]
+        game.save()
         return HttpResponse('success')
 
 class AdminGameApiView(View):
@@ -144,4 +113,4 @@ class ClientPortfolioApiView(View):
         portfolio_id = request.session['portfolio_id']
         portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
 
-        return HttpResponse(json.dumps(portfolio, cls=ClientPortfolioEncoder))
+        return HttpResponse(json.dumps(portfolio, cls=StockEncoder))
