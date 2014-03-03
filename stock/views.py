@@ -21,7 +21,10 @@ class AdminView(View):
     
     def get(self, request):
         game = Game.objects.get_active_game()
-        return render(request, self.template_name, {'game':game})
+        history = Game.objects.get_history()
+        history_page = Paginator(history, 3)
+        
+        return render(request, self.template_name, {'game':game, 'history':history_page.page(1).object_list})
 
 class AdminConfigView(View):
     template_name = 'stock/admin_config.html'
@@ -31,11 +34,14 @@ class AdminConfigView(View):
         if game and game.start:
             return HttpResponseBadRequest()
         
-        return render(request, self.template_name, {'game':game})
+        if game is None:
+            game = Game()
+        
+        return render(request, self.template_name, {'game':json.dumps(game, cls=StockEncoder)})
 
 class AdminApiView(View):
     def get(self, request):
-        game_list = Game.objects.all()
+        game_list = Game.objects.get_active_game()
         return HttpResponse(json.dumps(list(game_list), cls=StockEncoder))
     
     def post(self, request):

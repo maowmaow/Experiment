@@ -2,6 +2,7 @@ from django.db import models, transaction
 from json.encoder import JSONEncoder
 import datetime
 import string
+from decimal import Decimal
 
 class GameException(Exception):
     def __init__(self, message):
@@ -19,6 +20,9 @@ class GameManager(models.Manager):
         if len(active_game) > 0:
             return active_game[0]
         return None
+    
+    def get_history(self):
+        return self.get_query_set().filter(end__isnull=False)
 
 class Game(models.Model):
     
@@ -29,9 +33,9 @@ class Game(models.Model):
     END = 3
     
     password = models.CharField(max_length=50, blank=True)
-    init_price = models.DecimalField(decimal_places=2, max_digits=7)
-    init_qty = models.PositiveIntegerField(default=1000)
-    init_cash = models.DecimalField(decimal_places=2, max_digits=12)
+    init_price = models.DecimalField(decimal_places=2, max_digits=7, default=Decimal(100))
+    init_qty = models.PositiveIntegerField(default=10)
+    init_cash = models.DecimalField(decimal_places=2, max_digits=12, default=Decimal(1000))
     period = models.PositiveIntegerField(default=15)  # minutes
 
     start = models.DateTimeField(blank=True, null=True)
@@ -40,7 +44,7 @@ class Game(models.Model):
     objects = GameManager()
     
     class Meta:
-        ordering = ['pk']
+        ordering = ['-pk']
     
     @property
     def state(self):
@@ -79,7 +83,7 @@ class Portfolio(models.Model):
     cash = models.DecimalField(decimal_places=2, max_digits=12, default=0)
     
     class Meta:
-        ordering = ['name']
+        ordering = ['email']
     
     def save(self, *args, **kwargs):
         if self.pk is None and self.game.state != Game.READY:

@@ -10,14 +10,6 @@ stockApp.run(function($http, $cookies) {
 	$http.defaults.headers.delete = { 'X-CSRFToken' : $cookies['csrftoken'] };
 });
 
-stockApp.factory('stockSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/admin/stock/:stock_pk');
-}]);
-
-stockApp.factory('portfolioSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/admin/portfolio/:portfolio_pk');
-}]);
-
 stockApp.factory('gameSvc', ['$resource', function($resource) {
 	return $resource('/stock/api/admin/game/:action');
 }]);

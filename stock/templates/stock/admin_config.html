@@ -16,173 +16,64 @@
 <header>
 	{% csrf_token %}
 </header>
-<section class="container">
+<section class="container" ng-controller="stockAdminController">
 	<h1>Game Settings</h1>
-	{% if game == None %}
-	<div class="alert alert-info">A new game has been created.</div>
-	{% endif %}
 	{% verbatim %}
-	<div class="row">
-		<div class="col-md-6" ng-controller="stockAdminController">
-			<h4>Stock List</h4>
-			<form class="form-inline" role="form" ng-submit="saveStock()">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>#</th>						
-						<th>Stock Name</th>						
-						<th>Initial Price</th>
-						<th>Initial qty per user</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr ng-repeat="s in stock_list track by s.pk">
-						<td>{{$index + 1}}</td>
-						<td>{{s.name}}</td>
-						<td>{{s.init_price|currency}}</td>
-						<td>{{s.init_qty|number}}</td>
-						<td><a href="#null" ng-click="startEditStock(s)">Edit</a></td>
-					</tr>
-				</tbody>
-				<tfoot>
-					<tr ng-show="editStock == null">
-						<td></td>
-						<td><input class="form-control" ng-model="createStock.name" placeholder="Name" style="width:90px" /></td>
-						<td><input class="form-control" ng-model="createStock.init_price" placeholder="Price" type="number" style="width:90px" /></td>
-						<td colspan="2"><input class="form-control" ng-model="createStock.init_qty" placeholder="QTY" type="number" style="width:90px" />
-							<button class="btn btn-default">Create</button></td>
-					</tr>
-					<tr ng-show="editStock != null">
-						<td></td>
-						<td><input class="form-control" ng-model="editStock.name" placeholder="Name" type="email" style="width:90px" /></td>
-						<td><input class="form-control" ng-model="editStock.init_price" placeholder="Price" type="number" style="width:90px" /></td>
-						<td colspan="2"><input class="form-control" ng-model="editStock.init_qty" placeholder="QTY" type="number" style="width:90px" />
-							<button class="btn btn-default">Update</button>
-							<button class="btn btn-default" type="button" ng-click="editStock=null">Cancel</button>
-						</td>
-					</tr>
-				</tfoot>
-			</table>
-			</form>
-		</div>
-		<div class="col-md-6" ng-controller="portfolioAdminController">
-			<form class="form-inline" role="form" ng-submit="savePortfolio()">
-			<h4>User List</h4>
-			<table class="table">
-				<thead>
-					<tr>
-						<th>#</th>
-						<th>Username</th>
-						<th>Password</th>
-						<th>Cash</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr ng-repeat="p in portfolio_list track by p.pk">
-						<td>{{$index + 1}}</td>
-						<td>{{p.name}}</td>
-						<td>{{p.password}}</td>
-						<td>{{p.cash|number}}</td>
-						<td><a href="#null" ng-click="startEditPortfolio(p)">Edit</a></td>
-					</tr>
-				</tbody>
-				<tfoot>
-					<tr ng-show="editPortfolio == null">
-						<td></td>
-						<td><input class="form-control" ng-model="createPortfolio.name" placeholder="Name" style="width:90px" /></td>
-						<td><input class="form-control" ng-model="createPortfolio.password" placeholder="Password" style="width:90px" /></td>
-						<td colspan="2"><input class="form-control" ng-model="createPortfolio.cash" placeholder="Cash" type="number" style="width:90px" />
-							<button class="btn btn-default">Create</button></td>
-					</tr>
-					<tr ng-show="editPortfolio != null">
-						<td></td>
-						<td><input class="form-control" ng-model="editPortfolio.name" placeholder="Name" style="width:90px" /></td>
-						<td><input class="form-control" ng-model="editPortfolio.password" placeholder="Password" style="width:90px" /></td>
-						<td colspan="2"><input class="form-control" ng-model="editPortfolio.cash" placeholder="Cash" type="number" style="width:90px" />
-							<button class="btn btn-default">Update</button>
-							<button class="btn btn-default" type="button" ng-click="editPortfolio=null">Cancel</button>
-						</td>
-					</tr>
-				</tfoot>
-			</table>
-			</form>
+	<div class="alert alert-info" ng-if="!form.pk">A new game has been created.</div>
+	<div class="panel panel-default">
+		<div class="panel-body">
+		<form class="form-horizontal" role="form" ng-submit="save()">
+			<div class="col-md-4">
+				<h4>Session Settings</h4>
+				<div class="form-group">
+					<label class="col-sm-5 control-label">Password</label>
+					<div class="col-sm-6"><input class="form-control" type="text" placeholder="Password" ng-model="form.password" /></div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-5 control-label">Session length</label>
+					<div class="col-sm-6"><input class="form-control" type="number" min="10" step="5" placeholder="minutes" ng-model="form.period" /></div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<h4>User Settings</h4>
+				<div class="form-group">
+					<label class="col-sm-5 control-label">Initial Cash</label>
+					<div class="col-sm-6"><input class="form-control" type="text" placeholder="Cash" smart-float  ng-model="form.init_cash" /></div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<h4>Stock Settings (A-J)</h4>
+				<div class="form-group">
+					<label class="col-sm-5 control-label">Initial Price</label>
+					<div class="col-sm-6"><input class="form-control" type="text" placeholder="Price" smart-float ng-model="form.init_price" /></div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-5 control-label">Initial QTY</label>
+					<div class="col-sm-6"><input class="form-control" type="number" placeholder="QTY" min="0" ng-model="form.init_qty" /></div>
+				</div>
+			</div>
+			<p class="text-center"><button class="btn btn-lg btn-primary">Save</button></p>
+		</form>
 		</div>
 	</div>
 	{% endverbatim %}
-	<p class="text-center"><a href="{% url 'stock:admin' %}" class="btn btn-lg btn-primary">Save</a></p>
 </section>
 <footer>
 	
 </footer>
 <script>
-stockApp.controller('stockAdminController', ['$scope', '$http', 'stockSvc', function($scope, $http, stockSvc) {
-	$scope.createStock = {};
-	$scope.editStock = null;
+stockApp.controller('stockAdminController', ['$scope', '$http', '$window', 'gameSvc', function($scope, $http, $window, gameSvc) {
 	
-	$scope.loadStock = function() {
-		stockSvc.query(null, function(value) {
-			$scope.stock_list = value;	
+	$scope.form = {{game|safe}};
+	
+	$scope.save = function() {
+		gameSvc.save(null, $scope.form, function(value) {
+			$window.location = "{% url 'stock:admin' %}";
 		});
-	};
+	}
 	
-	$scope.startEditStock = function(stock) {
-		$scope.editStock = stock;
-	};
-
-	$scope.saveStock = function() {
-		if ($scope.editStock != null) {
-			stockSvc.save({}, $scope.editStock, function() {
-				$scope.loadStock();
-				$scope.editStock = null;
-			});
-		} else {
-			stockSvc.save({}, $scope.createStock, function() {
-				$scope.loadStock();
-				$scope.createStock = {};
-			});	
-		}
-	};
-	
-	$scope.deleteStock = function(stock) {
-		stockSvc.delete({ stock_pk:stock.pk }, null, function(value, headers) {
-			$scope.loadStock();
-		});
-	};
-
-	$scope.loadStock();
 }]);
-stockApp.controller('portfolioAdminController', ['$scope', '$http', 'portfolioSvc', function($scope, $http, portfolioSvc) {
-	$scope.createPortfolio = {};
-	$scope.editPortfolio = null;
-	
-	$scope.loadPortfolio = function() {
-		portfolioSvc.query(null, function(value) {
-			$scope.portfolio_list = value;
-		});
-	};
-	
-	$scope.startEditPortfolio = function(portfolio) {
-		$scope.editPortfolio = portfolio;
-	};
-	
-	$scope.savePortfolio = function() {
-		if ($scope.editPortfolio != null) {
-			portfolioSvc.save({ portfolio_pk:$scope.editPortfolio.pk }, $scope.editPortfolio, function() {
-				$scope.loadPortfolio();
-				$scope.editPortfolio = null;
-			});
-		} else {
-			portfolioSvc.save({}, $scope.createPortfolio, function() {
-				$scope.loadPortfolio();
-				$scope.createPortfolio = {};
-			});
-		}
-	};
-	
-	$scope.loadPortfolio();
-}]);
+
 </script>
 </body>
 </html>
