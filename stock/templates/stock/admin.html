@@ -38,82 +38,46 @@
 				<div class="col-md-3">
 					<h4>User Settings</h4>
 					<div class="form-group">
-						<label class="col-sm-5 control-label">Initial Cash</label>
+						<label class="col-sm-6 control-label">Initial Cash</label>
 						<div class="col-sm-6"><p class="form-control-static">${{game.init_cash|intcomma}}</p></div>
 					</div>
 				</div>
 				<div class="col-md-3">
 					<h4>Stock Settings (A-J)</h4>
 					<div class="form-group">
-						<label class="col-sm-5 control-label">Initial Price</label>
+						<label class="col-sm-6 control-label">Initial Price</label>
 						<div class="col-sm-6"><p class="form-control-static">${{game.init_price|intcomma}}</p></div>
 					</div>
 					<div class="form-group">
-						<label class="col-sm-5 control-label">Initial QTY</label>
+						<label class="col-sm-6 control-label">Initial QTY</label>
 						<div class="col-sm-6"><p class="form-control-static">{{game.init_qty|intcomma}}</p></div>
 					</div>
 				</div>
-				<div class="col-md-3 text-right" ng-controller="adminController">
+				<div class="col-md-3 text-right" ng-controller="gameController">
 					<p><button type="button" ng-click="startGame()" class="btn btn-lg btn-primary" ng-disabled="started">Start Game</button></p>
 					<p><button type="button" ng-click="stopGame()" class="btn btn-lg btn-danger">End Game</button></p>
 				</div>
 			</div>
 		</div>
-	{% endif %}
-	{% if history|length > 0 %}
-		<h4>Game History</h4>
-		{% for game in history %}
-			<div class="panel panel-default">
-				<div class="panel-body form-horizontal">
-					<div class="col-md-3">
-						<h4>Session Settings</h4>
-						<div class="form-group">
-							<label class="col-sm-6 control-label">Password</label>
-							<div class="col-sm-6"><p class="form-control-static">{{game.password}}</p></div>
-						</div>
-						<div class="form-group">
-							<label class="col-sm-6 control-label">Session length</label>
-							<div class="col-sm-6"><p class="form-control-static">{{game.period}} mins.</p></div>
-						</div>
-					</div>
-					<div class="col-md-3">
-						<h4>User Settings</h4>
-						<div class="form-group">
-							<label class="col-sm-5 control-label">Initial Cash</label>
-							<div class="col-sm-6"><p class="form-control-static">${{game.init_cash|intcomma}}</p></div>
-						</div>
-					</div>
-					<div class="col-md-3">
-						<h4>Stock Settings (A-J)</h4>
-						<div class="form-group">
-							<label class="col-sm-5 control-label">Initial Price</label>
-							<div class="col-sm-6"><p class="form-control-static">${{game.init_price|intcomma}}</p></div>
-						</div>
-						<div class="form-group">
-							<label class="col-sm-5 control-label">Initial QTY</label>
-							<div class="col-sm-6"><p class="form-control-static">{{game.init_qty|intcomma}}</p></div>
-						</div>
-					</div>
-					<div class="col-md-3 text-right">
-						<div class="form-group">
-							<label class="col-sm-5 control-label">Start</label>
-							<div class="col-sm-6"><p class="form-control-static">{{game.start|naturaltime}}</p></div>
-						</div>
-						<div class="form-group">
-							<label class="col-sm-5 control-label">End</label>
-							<div class="col-sm-6"><p class="form-control-static">{{game.end|naturaltime}}</p></div>
-						</div>
-					</div>
-				</div>
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h4>Current Log On User</h4>		
 			</div>
-		{% endfor %}
+			<div class="panel-body">
+			{% verbatim %}
+				<ol ng-controller="userController">
+					<li ng-repeat="p in portfolio_list track by p.pk">{{p.email}}</li>
+				</ol>
+			{% endverbatim %}
+			</div>
+		</div>
 	{% endif %}
 </section>
 <footer>
 	
 </footer>
 <script>
-stockApp.controller('adminController', ['$scope', '$http', '$window', 'gameSvc', function($scope, $http, $window, gameSvc) {
+stockApp.controller('gameController', ['$scope', '$window', 'gameSvc', function($scope, $window, gameSvc) {
 	
 	$scope.started = {% if game.start != None %}true{% else %}false{% endif %};
 	
@@ -129,7 +93,15 @@ stockApp.controller('adminController', ['$scope', '$http', '$window', 'gameSvc',
 			$window.location.reload();
 		});
 	};
-	
+}]);
+stockApp.controller('userController', ['$scope', '$interval', 'gameSvc', function($scope, $interval, gameSvc) {
+		
+	$scope.loadPortfolio = function() {
+		gameSvc.query({action:'portfolio'}, function(value) {
+			$scope.portfolio_list = value;
+		});
+	}
+	$interval(function() { $scope.loadPortfolio(); }, 1000);
 }]);
 </script>
 </body>

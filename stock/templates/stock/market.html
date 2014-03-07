@@ -16,34 +16,52 @@
 <section class="container">
 	<h1>Market Board</h1>
 	{% verbatim %}
-	<table class="table table-bordered table-condensed">
+	<table class="table table-bordered table-condensed" ng-app="stockApp" ng-controller="marketController">
 		<thead>
 			<tr>
 				<th>Stock Name</th>
-				<th>Open</th>
 				<th>Price</th>
-				<th>Bid Volume</th>
+				<th>Cumulative volume</th>
 				<th>Bid</th>
 				<th>Ask</th>
-				<th>Ask Volume</th>
 			</tr>
 		</thead>
 		<tbody>
-			<tr ng-repeat="s in stock_list">
-				<td>{{s.name}}</td>
-				<td>{{s.init_price}}</td>
-				<td>{{s.last_price}}</td>
-				<td>{{s.bid_vol}}</td>
-				<td>{{s.bid}}</td>
-				<td>{{s.ask}}</td>
-				<td>{{s.ask_vol}}</td>
+			<tr ng-repeat="m in market_list track by m.pk">
+				<td>{{m.stock}}</td>
+				<td>{{m.price|currency}}</td>
+				<td>{{m.volume_total|number}}</td>
+				<td>{{m.bid|currency}}</td>
+				<td>{{m.ask|currency}}</td>
 			</tr>
 		</tbody>
 	</table>
 	{% endverbatim %}
 </section>
-<footer>
+<script>
+stockApp.controller('marketController', ['$scope', '$window', '$interval', 'marketSvc', function($scope, $window, $interval, marketSvc) {
+
+	$scope.poll_rate = 500;
 	
-</footer>
+	$scope.$watch('form.market_price_value', function(newValue) {
+		if (newValue == 'MP') {
+			$scope.form.market_price = true;
+			$scope.form.price = '';
+		} else {
+			$scope.form.market_price = false;
+		}
+	});
+	
+	$scope.loadData = function() {
+		marketSvc.query(null, function(value) {
+			$scope.market_list = value;
+		}, function(httpResponse) {
+			$scope.error = httpResponse.data;
+		});
+	};
+	
+	$interval(function() { $scope.loadData(); }, $scope.poll_rate);
+}]);
+</script>
 </body>
 </html>

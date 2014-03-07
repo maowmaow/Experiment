@@ -14,6 +14,10 @@ stockApp.factory('gameSvc', ['$resource', function($resource) {
 	return $resource('/stock/api/admin/game/:action');
 }]);
 
+stockApp.factory('marketSvc', ['$resource', function($resource) {
+	return $resource('/stock/api/market');
+}]);
+
 stockApp.factory('clientSvc', ['$resource', function($resource) {
 	return $resource('/stock/api/client/portfolio');
 }]);

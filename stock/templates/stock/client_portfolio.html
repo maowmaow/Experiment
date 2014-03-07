@@ -16,38 +16,41 @@
 <section class="container" ng-controller="stockClientController">
 	<h1>Portfolio: {{portfolio.name}}</h1>
 	{% verbatim %}
+	<div class="alert alert-danger" ng-if="error">{{error}}</div>
 	<div class="row">
 		<div class="col-md-6">
-			<form role="form" class="form">
+			<form role="form" class="form" ng-submit="placeOrder()">
+				<fieldset ng-disabled="game_state==GAME_END">
 				<div class="panel panel-default">
 					<div class="panel-heading">
-						<p class="pull-right">Current Cash: {{cash|currency}}</p>
 						<h3 class="panel-title">Place your order</h3>
 					</div>
-						<table class="table" style="margin-bottom:0">
-							<thead>
-								<tr><th>Stock</th><th>Price</th><th>Quantity</th><th></th></tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td><div class="form-group">
-											<input name="stock" placeholder="Stock" class="form-control" style="width:100px" />
-											<div class="radio"><label><input type="radio" checked /> Buy</label></div>
-											<div class="radio"><label><input type="radio" /> Sell</label></div>
-										</div>
-									</td>
-									<td><div class="form-group">
-											<input name="price" placeholder="Price" type="number" class="form-control" style="width:100px" />
-											<div class="radio"><label><input type="radio" checked /> Limit</label></div>
-											<div class="radio"><label><input type="radio" /> Market Price</label></div>
-										</div>
-									</td>
-									<td><input name="qty" placeholder="QTY" type="number" class="form-control" style="width:100px" /></td>
-									<td><button class="btn btn-default">Submit</button></td>
-								</tr>
-							</tbody>
-						</table>
+					<table class="table" style="margin-bottom:0">
+						<thead>
+							<tr><th>Stock</th><th>Price</th><th>Quantity</th><th></th></tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><div class="form-group">
+										<select name="stock" class="form-control" style="width:100px" ng-model="form.stock" ng-options="s for s in stock_list" required>
+										</select>
+										<div class="radio"><label><input type="radio" ng-model="form.type" value="Buy" /> Buy</label></div>
+										<div class="radio"><label><input type="radio" ng-model="form.type" value="Sell" /> Sell</label></div>
+									</div>
+								</td>
+								<td><div class="form-group">
+										<input name="price" placeholder="Price" type="number" class="form-control" style="width:100px" ng-model="form.price" ng-disabled="form.market_price" required />
+										<div class="radio"><label><input type="radio" ng-model="form.market_price_value" value="Limit" /> Limit</label></div>
+										<div class="radio"><label><input type="radio" ng-model="form.market_price_value" value="MP" /> Market Price</label></div>
+									</div>
+								</td>
+								<td><input name="qty" placeholder="QTY" type="number" class="form-control" style="width:100px" ng-model="form.qty" required /></td>
+								<td><button class="btn btn-default">Submit</button></td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
+				</fieldset>
 			</form>
 			
 			<div class="panel panel-default">
@@ -63,27 +66,44 @@
 								<th>Stock</th>
 								<th>Price</th>
 								<th>QTY</th>
-								<th>Status</th>
+								<th>Match</th>
+								<th></th>
 							</tr>
 						</thead>
+						<tbody>
+							<tr ng-repeat="o in order_list track by o.pk">
+								<td>{{$index+1}}</td>
+								<td>{{o.created|date:'HH:mm:ss'}}</td>
+								<td>{{o.stock}}</td>
+								<td><span ng-if="!o.market_price">{{o.price}}</span><span ng-if="o.market_price">MP</span></td>
+								<td>{{o.qty}}</td>
+								<td>{{o.match}}</td>
+								<td><a href="#null" ng-click="" ng-if="o.match<o.qty">cancel</a></td>
+							</tr>
+						</tbody>
 					</table>
 				</div>
 			</div>
 		</div>
 		<div class="col-md-6">
+			<div class="panel panel-info">
+				<div class="panel-body">
+					<strong>Current Cash:</strong> {{cash|currency}}
+				</div>
+			</div>
 			<table class="table">
 				<thead>
 					<tr>
 						<th>Stock</th>
-						<th>Avg. Price</th>
 						<th>QTY</th>
+						<th>Market Price</th>
 					</tr>
 				</thead>
 				<tbody>
-					<tr ng-repeat="d in details_list">
+					<tr ng-repeat="d in details_list track by d.pk">
 						<td>{{d.stock}}</td>
-						<td>{{d.price}}</td>
 						<td>{{d.qty}}</td>
+						<td>{{d.price}}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -98,12 +118,36 @@
 stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$interval', 'clientSvc', function($scope, $http, $window, $interval, clientSvc) {
 
 	$scope.poll_rate = 2000;
+	$scope.stock_list = {{stock_list|safe}};
+	$scope.GAME_END = {{END|safe}};
+	
+	$scope.form = { type:'Buy', stock:'A', market_price_value:'Limit' };
+	
+	$scope.$watch('form.market_price_value', function(newValue) {
+		if (newValue == 'MP') {
+			$scope.form.market_price = true;
+			$scope.form.price = '';
+		} else {
+			$scope.form.market_price = false;
+		}
+	});
 	
 	$scope.loadData = function() {
 		clientSvc.get(null, function(value) {
 			$scope.cash = value.cash;
 			$scope.order_list = value.order;
 			$scope.details_list = value.details;
+			$scope.game_state = value.game_state;
+		}, function(httpResponse) {
+			$scope.error = httpResponse.data;
+		});
+	}
+	
+	$scope.placeOrder = function() {
+		clientSvc.save(null, $scope.form, function() {
+			$scope.loadData();
+		}, function(httpResponse) {
+			$scope.error = httpResponse.data;
 		});
 	}
 	
