@@ -19,5 +19,5 @@ stockApp.factory('marketSvc', ['$resource', function($resource) {
 }]);
 
 stockApp.factory('clientSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/client/portfolio');
+	return $resource('/stock/api/client/portfolio/:order_pk');
 }]);

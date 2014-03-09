@@ -15,5 +15,6 @@ urlpatterns = patterns('',
     
     url(r'^api/market$', MarketApiView.as_view(), name='api_market'),
       
-    url(r'^api/client/portfolio$', ClientPortfolioApiView.as_view(), name='api_client_portfolio'),  
+    url(r'^api/client/portfolio$', ClientPortfolioApiView.as_view(), name='api_client_portfolio'),
+    url(r'^api/client/portfolio/(?P<order_pk>\d+)$', ClientPortfolioCancelApiView.as_view(), name='api_client_portfolio_cancel'),  
 )

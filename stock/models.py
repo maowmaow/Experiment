@@ -3,6 +3,8 @@ from json.encoder import JSONEncoder
 import datetime
 import string
 from decimal import Decimal
+from django.db.models.aggregates import Sum
+from django.db.models.query_utils import Q
 
 class GameException(Exception):
     def __init__(self, message):
@@ -12,8 +14,6 @@ class GameException(Exception):
         return repr(self.message)
 
 class GameManager(models.Manager):
-    def get_query_set(self):
-        return models.Manager.get_query_set(self)
     
     def get_active_game(self):
         active_game = self.get_query_set().filter(end__isnull=True)
@@ -63,6 +63,7 @@ class Game(models.Model):
             
             for p in self.portfolio_set.all():
                 p.cash = self.init_cash
+                p.cash_available = self.init_cash
                 p.save()
                 
                 for s in Game.STOCK_LIST:
@@ -70,6 +71,7 @@ class Game(models.Model):
                     pd.portfolio = p
                     pd.stock = s
                     pd.qty = self.init_qty
+                    pd.qty_available = self.init_qty
                     pd.save()
             
             Market.start(self.init_price)
@@ -83,6 +85,7 @@ class Portfolio(models.Model):
     game = models.ForeignKey(Game)
     email = models.CharField(max_length=50)
     cash = models.DecimalField(decimal_places=2, max_digits=12, default=0)
+    cash_available = models.DecimalField(decimal_places=2, max_digits=12, default=0)
     
     class Meta:
         ordering = ['email']
@@ -93,50 +96,195 @@ class Portfolio(models.Model):
         super(Portfolio, self).save(*args, **kwargs)
 
 class PortfolioDetailManager(models.Manager):
-    def get_query_set(self):
-        return models.Manager.get_query_set(self)
     
     def get_with_price(self, portfolio):
-        return PortfolioDetail.objects.raw('SELECT d.*, m.price FROM stock_portfoliodetail d inner join stock_market m on d.stock=m.stock where d.portfolio_id=%s', [portfolio.pk])
+        return self.raw('SELECT d.*, m.price FROM stock_portfoliodetail d inner join stock_market m on d.stock=m.stock where d.portfolio_id=%s order by d.id', [portfolio.pk])
 
 class PortfolioDetail(models.Model):
     portfolio = models.ForeignKey(Portfolio)
     stock = models.CharField(max_length=8)
     qty = models.PositiveIntegerField(default=0)
+    qty_available = models.PositiveIntegerField(default=0)
     
     objects = PortfolioDetailManager()
     
     class Meta:
         ordering = ['pk']
+        
+class OrderManager(models.Manager):
+    
+    def get_highest_bid(self, stock, limit_price=None):
+        pending_orders = self.get_query_set().filter(type=Order.BUY, stock=stock, status=Order.PENDING)
+        if limit_price:
+            pending_orders = pending_orders.filter(Q(price__gte=limit_price) | Q(market_price=True))
+        return pending_orders.order_by('-market_price', '-price', 'pk')
+    
+    def get_lowest_ask(self, stock, limit_price=None):
+        pending_orders = self.get_query_set().filter(type=Order.SELL, stock=stock, status=Order.PENDING)
+        if limit_price:
+            pending_orders = pending_orders.filter(Q(price__lte=limit_price) | Q(market_price=True))
+        return pending_orders.order_by('-market_price', 'price', 'pk')
 
 class Order(models.Model):
     BUY = 1
     SELL = -1
     TYPE_CHOICES = ((BUY, 'Buy'), (SELL, 'Sell'))
+    
+    PENDING = 1
+    COMPLETE = 2
+    CANCEL = 3
+    STATUS_CHOICES = ((PENDING, 'Pending'), (COMPLETE, 'Completed'), (CANCEL, 'Canceled'))
+    
+    MP_RESERVE_RATE = 1.2
         
     portfolio = models.ForeignKey(Portfolio)
     type = models.SmallIntegerField(choices=TYPE_CHOICES)
     stock = models.CharField(max_length=8)
     price = models.DecimalField(decimal_places=2, max_digits=7, default=0)
+    price_reserve = models.DecimalField(decimal_places=2, max_digits=7, default=0)
     market_price = models.BooleanField(default=False)
     qty = models.PositiveIntegerField(default=0)
     match = models.PositiveIntegerField(default=0)
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=PENDING)
     created = models.DateTimeField(auto_now_add=True)
+    
+    objects = OrderManager()
     
     class Meta:
         ordering = ['pk']
     
+    
     def save(self, *args, **kwargs):
         if self.pk is None and self.portfolio.game.state != Game.RUNNING:
             raise GameException('Game has not been started yet.' if self.portfolio.game.state == Game.READY else 'Game is already ended.')
+        
+        if self.qty == self.match:
+            self.status = Order.COMPLETE
+
         super(Order, self).save(*args, **kwargs)
         
+    @transaction.commit_on_success
+    def cancel(self):
+        myport = self.portfolio
+        mydetail = myport.portfoliodetail_set.filter(stock=self.stock)[0]
+        
+        if self.type == Order.SELL:
+            mydetail.qty_available += (self.qty - self.match) 
+            mydetail.save()
+        else:
+            myport.cash_available += ((self.qty - self.match) * self.price_reserve)
+            myport.save()
+            
+        self.status = Order.CANCEL
+        self.save()
+
+        Market.objects.get(stock=self.stock).update()
+            
+    def reserve(self):
+        myport = self.portfolio
+        mydetail = myport.portfoliodetail_set.filter(stock=self.stock)[0]
+    
+        if self.type == Order.SELL:
+            mydetail.qty_available -= self.qty
+            if mydetail.qty_available < 0:
+                raise GameException('You do not have enough stock available.')
+            mydetail.save()
+        else:
+            self.price_reserve = self.price if not self.market_price else Transaction.objects.get_latest_price(self.stock) * Decimal(Order.MP_RESERVE_RATE)
+            myport.cash_available -= (self.qty * self.price_reserve)
+            if myport.cash_available < 0:
+                raise GameException('You do not have enough money.')
+            myport.save()
+        
+        self.match = 0
+        self.save()
+
+    def resolve(self, transaction):
+        myport = self.portfolio
+        mydetail = myport.portfoliodetail_set.filter(stock=self.stock)[0]
+        
+        transaction_value = transaction.qty * transaction.price
+        
+        if self.type == Order.SELL:
+            myport.cash += transaction_value
+            myport.cash_available += transaction_value
+            myport.save()
+            
+            mydetail.qty -= transaction.qty
+            mydetail.save()
+        else:
+            myport.cash -= transaction_value
+            myport.cash_available += ((self.price_reserve * transaction.qty) - transaction_value)
+            myport.save()
+            
+            mydetail.qty += transaction.qty
+            mydetail.qty_available += transaction.qty
+            mydetail.save() 
+            
+        self.match += transaction.qty
+        self.save()
+
+    @transaction.commit_on_success
+    def place_order(self):
+        self.reserve()
+        
+        if self.type == Order.SELL:
+            options = Order.objects.get_highest_bid(self.stock, self.price if not self.market_price else None)
+        else:
+            options = Order.objects.get_lowest_ask(self.stock, self.price if not self.market_price else None)
+
+        qty_pending = self.qty - self.match
+        for o in options:
+            offer_qty = o.qty - o.match
+            match_qty = min(qty_pending, offer_qty)
+
+            qty_pending -= match_qty
+
+            log = Transaction()
+            log.game = self.portfolio.game
+            log.stock = self.stock
+            
+            if self.type == Order.SELL:
+                log.seller = self
+                log.buyer = o
+            else:
+                log.seller = o
+                log.buyer = self
+            
+            log.price = o.price if not o.market_price else (self.price if not self.market_price else Transaction.objects.get_latest_price(self.stock))
+            log.qty = match_qty
+            log.save()
+            
+            o.resolve(log)
+            self.resolve(log)
+                    
+            if qty_pending == 0:
+                break;
+        
+        Market.objects.get(stock=self.stock).update()
+
     @classmethod
     def parse_type(cls, text):
         for c in cls.TYPE_CHOICES:
             if c[1] == text:
                 return c[0]
         return None
+
+class TransactionManager(models.Manager):
+    def get_latest_price(self, stock):
+        try:
+            return self.get_query_set().filter(stock=stock).order_by('-pk')[0].price
+        except IndexError:
+            game = Game.objects.get_active_game()
+            if game:
+                return game.init_price
+            return None
+    
+    def get_latest(self, stock):
+        try:
+            return self.get_query_set().filter(stock=stock).order_by('-pk')[0]
+        except IndexError:
+            return None
 
 class Transaction(models.Model):
     game = models.ForeignKey(Game)
@@ -147,20 +295,22 @@ class Transaction(models.Model):
     qty = models.PositiveIntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True) 
     
+    objects = TransactionManager()
+    
     class Meta:
         ordering = ['pk']
 
 class Market(models.Model):
     stock = models.CharField(max_length=8)
     price = models.DecimalField(decimal_places=2, max_digits=7)
-    bid = models.DecimalField(decimal_places=2, max_digits=7, default=0)
-    ask = models.DecimalField(decimal_places=2, max_digits=7, default=0) 
+    bid = models.DecimalField(decimal_places=2, max_digits=7, null=True)
+    ask = models.DecimalField(decimal_places=2, max_digits=7, null=True) 
     volume_last = models.PositiveIntegerField(default=0)
     volume_total = models.PositiveIntegerField(default=0)
     
     class Meta:
         ordering = ['stock']
-        
+    
     @classmethod
     def start(cls, price):
         try:
@@ -175,6 +325,25 @@ class Market(models.Model):
             m.stock = s
             m.price = price
             m.save()
+
+    def update(self):
+        self.price = Transaction.objects.get_latest_price(self.stock)
+        try:
+            self.bid = Order.objects.get_highest_bid(self.stock)[0].price
+        except IndexError:
+            self.bid = None
+        
+        try: 
+            self.ask = Order.objects.get_lowest_ask(self.stock)[0].price
+        except IndexError:
+            self.ask = None
+
+        latest_transaction = Transaction.objects.get_latest(self.stock)
+        if latest_transaction:
+            self.volume_last = latest_transaction.qty
+        
+        self.volume_total = Transaction.objects.filter(stock=self.stock).aggregate(Sum('qty'))['qty__sum'] or 0
+        self.save()
 
 class StockEncoder(JSONEncoder):
     def default(self, obj):
@@ -191,6 +360,7 @@ class StockEncoder(JSONEncoder):
         if isinstance(obj, Portfolio):
             return dict(pk=obj.pk,
                         cash=str(obj.cash),
+                        cash_available=str(obj.cash_available),
                         details=list(PortfolioDetail.objects.get_with_price(obj)),
                         order = list(obj.order_set.all()),
                         game_state = obj.game.state,
@@ -199,6 +369,7 @@ class StockEncoder(JSONEncoder):
             return dict(pk=obj.pk,
                         stock=obj.stock,
                         qty=obj.qty,
+                        qty_available=obj.qty_available,
                         price=str(obj.price) if hasattr(obj, 'price') else None,
                         )
         elif isinstance(obj, Order):
@@ -209,6 +380,7 @@ class StockEncoder(JSONEncoder):
                         market_price=obj.market_price,
                         qty=obj.qty,
                         match=obj.match,
+                        status=obj.get_status_display(),
                         created=obj.created,
                         )
         elif isinstance(obj, Market):

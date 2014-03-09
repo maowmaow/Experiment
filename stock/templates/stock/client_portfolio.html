@@ -18,7 +18,7 @@
 	{% verbatim %}
 	<div class="alert alert-danger" ng-if="error">{{error}}</div>
 	<div class="row">
-		<div class="col-md-6">
+		<div class="col-md-7">
 			<form role="form" class="form" ng-submit="placeOrder()">
 				<fieldset ng-disabled="game_state==GAME_END">
 				<div class="panel panel-default">
@@ -64,9 +64,11 @@
 								<th>#</th>
 								<th>Time</th>
 								<th>Stock</th>
+								<th>Type</th>
 								<th>Price</th>
 								<th>QTY</th>
 								<th>Match</th>
+								<th>Status</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -75,20 +77,22 @@
 								<td>{{$index+1}}</td>
 								<td>{{o.created|date:'HH:mm:ss'}}</td>
 								<td>{{o.stock}}</td>
+								<td>{{o.type}}</td>
 								<td><span ng-if="!o.market_price">{{o.price}}</span><span ng-if="o.market_price">MP</span></td>
 								<td>{{o.qty}}</td>
 								<td>{{o.match}}</td>
-								<td><a href="#null" ng-click="" ng-if="o.match<o.qty">cancel</a></td>
+								<td>{{o.status}}</td>
+								<td><a href="#null" ng-click="cancelOrder(o)" ng-if="o.status=='Pending' && o.match<o.qty">cancel</a></td>
 							</tr>
 						</tbody>
 					</table>
 				</div>
 			</div>
 		</div>
-		<div class="col-md-6">
+		<div class="col-md-5">
 			<div class="panel panel-info">
 				<div class="panel-body">
-					<strong>Current Cash:</strong> {{cash|currency}}
+					<strong>Current Cash:</strong> {{cash_available|currency}}
 				</div>
 			</div>
 			<table class="table">
@@ -102,7 +106,7 @@
 				<tbody>
 					<tr ng-repeat="d in details_list track by d.pk">
 						<td>{{d.stock}}</td>
-						<td>{{d.qty}}</td>
+						<td>{{d.qty_available}}</td>
 						<td>{{d.price}}</td>
 					</tr>
 				</tbody>
@@ -135,6 +139,7 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 	$scope.loadData = function() {
 		clientSvc.get(null, function(value) {
 			$scope.cash = value.cash;
+			$scope.cash_available = value.cash_available;
 			$scope.order_list = value.order;
 			$scope.details_list = value.details;
 			$scope.game_state = value.game_state;
@@ -145,6 +150,14 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 	
 	$scope.placeOrder = function() {
 		clientSvc.save(null, $scope.form, function() {
+			$scope.loadData();
+		}, function(httpResponse) {
+			$scope.error = httpResponse.data;
+		});
+	}
+	
+	$scope.cancelOrder = function(order) {
+		clientSvc.save({order_pk:order.pk}, null, function() {
 			$scope.loadData();
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;

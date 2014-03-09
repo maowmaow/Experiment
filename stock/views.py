@@ -130,6 +130,7 @@ class ClientView(View):
         portfolio.game = game
         portfolio.email = email
         portfolio.cash = game.init_cash
+        portfolio.cash_available = game.init_cash
         portfolio.save()
         
         request.session['portfolio_id'] = portfolio.pk
@@ -167,8 +168,20 @@ class ClientPortfolioApiView(View):
             order.price = data['price'] if not data['market_price'] else 0
             order.market_price = data['market_price']
             order.qty = data['qty']
-            order.save()
+            order.place_order()
         except GameException as e:
             return HttpResponseBadRequest(e.message)
+
+        return HttpResponse('success')
+
+class ClientPortfolioCancelApiView(View):
+    
+    def post(self, request, order_pk):
+        portfolio_id = request.session['portfolio_id']
+        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+        
+        order = Order.objects.get(pk=order_pk)
+        if order.portfolio == portfolio:
+            order.cancel()
 
         return HttpResponse('success')
