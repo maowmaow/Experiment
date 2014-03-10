@@ -74,7 +74,7 @@ class Game(models.Model):
                     pd.qty_available = self.init_qty
                     pd.save()
             
-            Market.start(self.init_price)
+            Market.start(self)
     
     def end_game(self):
         if self.state == Game.RUNNING:
@@ -113,14 +113,14 @@ class PortfolioDetail(models.Model):
         
 class OrderManager(models.Manager):
     
-    def get_highest_bid(self, stock, limit_price=None):
-        pending_orders = self.get_query_set().filter(type=Order.BUY, stock=stock, status=Order.PENDING)
+    def get_highest_bid(self, game, stock, limit_price=None):
+        pending_orders = self.get_query_set().filter(game=game, type=Order.BUY, stock=stock, status=Order.PENDING)
         if limit_price:
             pending_orders = pending_orders.filter(Q(price__gte=limit_price) | Q(market_price=True))
         return pending_orders.order_by('-market_price', '-price', 'pk')
     
-    def get_lowest_ask(self, stock, limit_price=None):
-        pending_orders = self.get_query_set().filter(type=Order.SELL, stock=stock, status=Order.PENDING)
+    def get_lowest_ask(self, game, stock, limit_price=None):
+        pending_orders = self.get_query_set().filter(game=game, type=Order.SELL, stock=stock, status=Order.PENDING)
         if limit_price:
             pending_orders = pending_orders.filter(Q(price__lte=limit_price) | Q(market_price=True))
         return pending_orders.order_by('-market_price', 'price', 'pk')
@@ -136,7 +136,8 @@ class Order(models.Model):
     STATUS_CHOICES = ((PENDING, 'Pending'), (COMPLETE, 'Completed'), (CANCEL, 'Canceled'))
     
     MP_RESERVE_RATE = 1.2
-        
+    
+    game = models.ForeignKey(Game)
     portfolio = models.ForeignKey(Portfolio)
     type = models.SmallIntegerField(choices=TYPE_CHOICES)
     stock = models.CharField(max_length=8)
@@ -155,8 +156,8 @@ class Order(models.Model):
     
     
     def save(self, *args, **kwargs):
-        if self.pk is None and self.portfolio.game.state != Game.RUNNING:
-            raise GameException('Game has not been started yet.' if self.portfolio.game.state == Game.READY else 'Game is already ended.')
+        if self.pk is None and self.game.state != Game.RUNNING:
+            raise GameException('Game has not been started yet.' if self.game.state == Game.READY else 'Game is already ended.')
         
         if self.qty == self.match:
             self.status = Order.COMPLETE
@@ -229,9 +230,9 @@ class Order(models.Model):
         self.reserve()
         
         if self.type == Order.SELL:
-            options = Order.objects.get_highest_bid(self.stock, self.price if not self.market_price else None)
+            options = Order.objects.get_highest_bid(self.game, self.stock, self.price if not self.market_price else None)
         else:
-            options = Order.objects.get_lowest_ask(self.stock, self.price if not self.market_price else None)
+            options = Order.objects.get_lowest_ask(self.game, self.stock, self.price if not self.market_price else None)
 
         qty_pending = self.qty - self.match
         for o in options:
@@ -251,7 +252,7 @@ class Order(models.Model):
                 log.seller = o
                 log.buyer = self
             
-            log.price = o.price if not o.market_price else (self.price if not self.market_price else Transaction.objects.get_latest_price(self.stock))
+            log.price = o.price if not o.market_price else (self.price if not self.market_price else Transaction.objects.get_latest_price(self.game, self.stock))
             log.qty = match_qty
             log.save()
             
@@ -271,18 +272,18 @@ class Order(models.Model):
         return None
 
 class TransactionManager(models.Manager):
-    def get_latest_price(self, stock):
+    def get_latest_price(self, game, stock):
         try:
-            return self.get_query_set().filter(stock=stock).order_by('-pk')[0].price
+            return self.get_query_set().filter(game=game, stock=stock).order_by('-pk')[0].price
         except IndexError:
             game = Game.objects.get_active_game()
             if game:
                 return game.init_price
             return None
     
-    def get_latest(self, stock):
+    def get_latest(self, game, stock):
         try:
-            return self.get_query_set().filter(stock=stock).order_by('-pk')[0]
+            return self.get_query_set().filter(game=game, stock=stock).order_by('-pk')[0]
         except IndexError:
             return None
 
@@ -301,6 +302,7 @@ class Transaction(models.Model):
         ordering = ['pk']
 
 class Market(models.Model):
+    game = models.ForeignKey(Game)
     stock = models.CharField(max_length=8)
     price = models.DecimalField(decimal_places=2, max_digits=7)
     bid = models.DecimalField(decimal_places=2, max_digits=7, null=True)
@@ -312,7 +314,7 @@ class Market(models.Model):
         ordering = ['stock']
     
     @classmethod
-    def start(cls, price):
+    def start(cls, game):
         try:
             cursor = connection.cursor()
             cursor.execute("TRUNCATE TABLE stock_market")
@@ -322,27 +324,28 @@ class Market(models.Model):
         
         for s in Game.STOCK_LIST:
             m = Market()
+            m.game = game
             m.stock = s
-            m.price = price
+            m.price = game.init_price
             m.save()
 
     def update(self):
-        self.price = Transaction.objects.get_latest_price(self.stock)
+        self.price = Transaction.objects.get_latest_price(self.game, self.stock)
         try:
-            self.bid = Order.objects.get_highest_bid(self.stock)[0].price
+            self.bid = Order.objects.get_highest_bid(self.game, self.stock)[0].price
         except IndexError:
             self.bid = None
         
         try: 
-            self.ask = Order.objects.get_lowest_ask(self.stock)[0].price
+            self.ask = Order.objects.get_lowest_ask(self.game, self.stock)[0].price
         except IndexError:
             self.ask = None
 
-        latest_transaction = Transaction.objects.get_latest(self.stock)
+        latest_transaction = Transaction.objects.get_latest(self.game, self.stock)
         if latest_transaction:
             self.volume_last = latest_transaction.qty
         
-        self.volume_total = Transaction.objects.filter(stock=self.stock).aggregate(Sum('qty'))['qty__sum'] or 0
+        self.volume_total = Transaction.objects.filter(game=self.game, stock=self.stock).aggregate(Sum('qty'))['qty__sum'] or 0
         self.save()
 
 class StockEncoder(JSONEncoder):

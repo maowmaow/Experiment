@@ -19,10 +19,12 @@
 	{% if game == None %}
 		<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_config' %}" class="btn btn-default">Create New Game</a></div>
 	{% else %}
-		<div class="panel panel-default">
+		<div class="panel panel-default" ng-controller="gameController">
+			{% verbatim %}
 			<div class="panel-heading">
-				<h4>Current Game Settings <small><a href="{% url 'stock:admin_config' %}">Edit</a></small></h4>		
+				<h4>Current Game Settings <small><a href="{{editUrl}}" ng-if="!started">Edit</a></small></h4>
 			</div>
+			{% endverbatim %}		
 			<div class="panel-body form-horizontal">
 				<div class="col-md-3">
 					<h4>Session Settings</h4>
@@ -53,7 +55,7 @@
 						<div class="col-sm-6"><p class="form-control-static">{{game.init_qty|intcomma}}</p></div>
 					</div>
 				</div>
-				<div class="col-md-3 text-right" ng-controller="gameController">
+				<div class="col-md-3 text-right">
 					<p><button type="button" ng-click="startGame()" class="btn btn-lg btn-primary" ng-disabled="started">Start Game</button></p>
 					<p><button type="button" ng-click="stopGame()" class="btn btn-lg btn-danger">End Game</button></p>
 				</div>
@@ -80,6 +82,8 @@
 stockApp.controller('gameController', ['$scope', '$window', 'gameSvc', function($scope, $window, gameSvc) {
 	
 	$scope.started = {% if game.start != None %}true{% else %}false{% endif %};
+	
+	$scope.editUrl = "{% url 'stock:admin_config' %}";
 	
 	$scope.startGame = function() {
 		gameSvc.save({action:'start'}, null, function(value) {

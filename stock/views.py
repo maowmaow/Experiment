@@ -65,7 +65,7 @@ class AdminApiView(View):
 class AdminPortfolioApiView(View):
     def get(self, request):
         game = Game.objects.get_active_game()
-        return HttpResponse(json.dumps(list(game.portfolio_set.values('email').all()), cls=StockEncoder))
+        return HttpResponse(json.dumps(list(game.portfolio_set.values('pk','email').all()), cls=StockEncoder))
   
 class AdminGameApiView(View):
     def post(self, request, action):
@@ -162,6 +162,7 @@ class ClientPortfolioApiView(View):
         
         try:
             order = Order()
+            order.game = portfolio.game
             order.portfolio = portfolio
             order.type = Order.parse_type(data['type'])
             order.stock = data['stock']
