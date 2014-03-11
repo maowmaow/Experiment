@@ -11,11 +11,11 @@ stockApp.run(function($http, $cookies) {
 });
 
 stockApp.factory('gameSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/admin/game/:action');
+	return $resource('/stock/api/admin/game/:game_pk/:action');
 }]);
 
 stockApp.factory('marketSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/market');
+	return $resource('/stock/api/market/:game_pk');
 }]);
 
 stockApp.factory('clientSvc', ['$resource', function($resource) {

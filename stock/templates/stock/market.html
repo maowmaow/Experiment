@@ -60,7 +60,7 @@ stockApp.controller('marketController', ['$scope', '$window', '$interval', 'mark
 	$scope.market_list = [];
 
 	$scope.loadData = function() {
-		marketSvc.query(null, function(value) {
+		marketSvc.query({ game_pk:{{game.pk}} }, function(value) {
 			for (var i=0; i<value.length; i++) {
 				if ($scope.market_list[i]) {
 					angular.extend($scope.market_list[i], value[i]);	

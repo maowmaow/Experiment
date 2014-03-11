@@ -16,10 +16,7 @@ class GameException(Exception):
 class GameManager(models.Manager):
     
     def get_active_game(self):
-        active_game = self.get_query_set().filter(end__isnull=True)
-        if len(active_game) > 0:
-            return active_game[0]
-        return None
+        return self.get_query_set().filter(end__isnull=True)
     
     def get_history(self):
         return self.get_query_set().filter(end__isnull=False)
@@ -32,6 +29,7 @@ class Game(models.Model):
     RUNNING = 2
     END = 3
     
+    name = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=50, blank=True)
     init_price = models.DecimalField(decimal_places=2, max_digits=7, default=Decimal(100))
     init_qty = models.PositiveIntegerField(default=10)
@@ -98,7 +96,7 @@ class Portfolio(models.Model):
 class PortfolioDetailManager(models.Manager):
     
     def get_with_price(self, portfolio):
-        return self.raw('SELECT d.*, m.price FROM stock_portfoliodetail d inner join stock_market m on d.stock=m.stock where d.portfolio_id=%s order by d.id', [portfolio.pk])
+        return self.raw('SELECT d.*, m.price FROM stock_portfoliodetail d inner join stock_market m on d.stock=m.stock where d.portfolio_id=%s and m.game_id=%s order by d.id', [portfolio.pk, portfolio.game.pk])
 
 class PortfolioDetail(models.Model):
     portfolio = models.ForeignKey(Portfolio)
@@ -191,7 +189,7 @@ class Order(models.Model):
                 raise GameException('You do not have enough stock available.')
             mydetail.save()
         else:
-            self.price_reserve = self.price if not self.market_price else Transaction.objects.get_latest_price(self.stock) * Decimal(Order.MP_RESERVE_RATE)
+            self.price_reserve = self.price if not self.market_price else Transaction.objects.get_latest_price(self.game, self.stock) * Decimal(Order.MP_RESERVE_RATE)
             myport.cash_available -= (self.qty * self.price_reserve)
             if myport.cash_available < 0:
                 raise GameException('You do not have enough money.')
@@ -257,12 +255,16 @@ class Order(models.Model):
             log.save()
             
             o.resolve(log)
+            
+            if o.portfolio.pk == self.portfolio.pk:
+                self.portfolio = o.portfolio
+
             self.resolve(log)
                     
             if qty_pending == 0:
                 break;
         
-        Market.objects.get(stock=self.stock).update()
+        Market.objects.get(game=self.game, stock=self.stock).update()
 
     @classmethod
     def parse_type(cls, text):
@@ -276,10 +278,7 @@ class TransactionManager(models.Manager):
         try:
             return self.get_query_set().filter(game=game, stock=stock).order_by('-pk')[0].price
         except IndexError:
-            game = Game.objects.get_active_game()
-            if game:
-                return game.init_price
-            return None
+            return game.init_price
     
     def get_latest(self, game, stock):
         try:
@@ -315,13 +314,6 @@ class Market(models.Model):
     
     @classmethod
     def start(cls, game):
-        try:
-            cursor = connection.cursor()
-            cursor.execute("TRUNCATE TABLE stock_market")
-            transaction.commit_unless_managed()
-        finally:
-            cursor.close()
-        
         for s in Game.STOCK_LIST:
             m = Market()
             m.game = game
@@ -352,13 +344,16 @@ class StockEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Game):
             return dict(pk = obj.pk,
+                        name = obj.name,
                         password = obj.password,
                         init_price = str(obj.init_price),
                         init_qty = obj.init_qty,
                         init_cash = str(obj.init_cash),
                         period = obj.period,
                         start = obj.start,
-                        end = obj.end
+                        end = obj.end,
+                        state = obj.state,
+                        portfolio_count = len(obj.portfolio_set.all()),
                         )
         if isinstance(obj, Portfolio):
             return dict(pk=obj.pk,

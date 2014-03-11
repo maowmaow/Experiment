@@ -16,97 +16,20 @@
 <body ng-app="stockApp">
 <section class="container">
 	<h1>Welcome to Stock Trading game!</h1>
-	{% if game == None %}
-		<div class="alert alert-info">There is no active game session right now. <a href="{% url 'stock:admin_config' %}" class="btn btn-default">Create New Game</a></div>
-	{% else %}
-		<div class="panel panel-default" ng-controller="gameController">
-			{% verbatim %}
-			<div class="panel-heading">
-				<h4>Current Game Settings <small><a href="{{editUrl}}" ng-if="!started">Edit</a></small></h4>
-			</div>
-			{% endverbatim %}		
-			<div class="panel-body form-horizontal">
-				<div class="col-md-3">
-					<h4>Session Settings</h4>
-					<div class="form-group">
-						<label class="col-sm-6 control-label">Password</label>
-						<div class="col-sm-6"><p class="form-control-static">{{game.password}}</p></div>
-					</div>
-					<div class="form-group">
-						<label class="col-sm-6 control-label">Session length</label>
-						<div class="col-sm-6"><p class="form-control-static">{{game.period}} mins.</p></div>
-					</div>
-				</div>
-				<div class="col-md-3">
-					<h4>User Settings</h4>
-					<div class="form-group">
-						<label class="col-sm-6 control-label">Initial Cash</label>
-						<div class="col-sm-6"><p class="form-control-static">${{game.init_cash|intcomma}}</p></div>
-					</div>
-				</div>
-				<div class="col-md-3">
-					<h4>Stock Settings (A-J)</h4>
-					<div class="form-group">
-						<label class="col-sm-6 control-label">Initial Price</label>
-						<div class="col-sm-6"><p class="form-control-static">${{game.init_price|intcomma}}</p></div>
-					</div>
-					<div class="form-group">
-						<label class="col-sm-6 control-label">Initial QTY</label>
-						<div class="col-sm-6"><p class="form-control-static">{{game.init_qty|intcomma}}</p></div>
-					</div>
-				</div>
-				<div class="col-md-3 text-right">
-					<p><button type="button" ng-click="startGame()" class="btn btn-lg btn-primary" ng-disabled="started">Start Game</button></p>
-					<p><button type="button" ng-click="stopGame()" class="btn btn-lg btn-danger">End Game</button></p>
-				</div>
-			</div>
+	<div class="panel panel-default" style="width:500px; margin:100px auto 0;">
+		<div class="panel-heading">
+			<h3 class="panel-title">Please log in</h3>
 		</div>
-		<div class="panel panel-default">
-			<div class="panel-heading">
-				<h4>Current Log On User</h4>		
-			</div>
-			<div class="panel-body">
-			{% verbatim %}
-				<ol ng-controller="userController">
-					<li ng-repeat="p in portfolio_list track by p.pk">{{p.email}}</li>
-				</ol>
-			{% endverbatim %}
-			</div>
+		<div class="panel-body">
+			<form action="{% url 'stock:admin' %}" method="post" role="form" class="form-inline">
+				{% csrf_token %}
+				<input name="username" placeholder="username" type="text" class="form-control" />
+				<input name="password" placeholder="password" type="password" class="form-control" />
+				<button class="btn btn-default">Submit</button>
+				{% if error %}<p class="text-danger">{{error}}</p>{% endif %}
+			</form>
 		</div>
-	{% endif %}
+	</div>
 </section>
-<footer>
-	
-</footer>
-<script>
-stockApp.controller('gameController', ['$scope', '$window', 'gameSvc', function($scope, $window, gameSvc) {
-	
-	$scope.started = {% if game.start != None %}true{% else %}false{% endif %};
-	
-	$scope.editUrl = "{% url 'stock:admin_config' %}";
-	
-	$scope.startGame = function() {
-		gameSvc.save({action:'start'}, null, function(value) {
-			$scope.started = true;
-			$window.open("{% url 'stock:market' %}");
-		});
-	};
-	
-	$scope.stopGame = function() {
-		gameSvc.save({action:'end'}, null, function(value) {
-			$window.location.reload();
-		});
-	};
-}]);
-stockApp.controller('userController', ['$scope', '$interval', 'gameSvc', function($scope, $interval, gameSvc) {
-		
-	$scope.loadPortfolio = function() {
-		gameSvc.query({action:'portfolio'}, function(value) {
-			$scope.portfolio_list = value;
-		});
-	}
-	$interval(function() { $scope.loadPortfolio(); }, 1000);
-}]);
-</script>
 </body>
 </html>

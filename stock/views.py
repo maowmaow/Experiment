@@ -9,7 +9,9 @@ from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, 
 from stock.models import Game, Portfolio, StockEncoder, Order, GameException,\
     Market
 from decimal import Decimal
-from django.db import transaction
+from django.db import transaction, connection
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
 
 class IndexView(View):
     template_name = 'stock/index.html'
@@ -22,26 +24,56 @@ class AdminView(View):
     template_name = 'stock/admin.html'
     
     def get(self, request):
-        game = Game.objects.get_active_game()
-        return render(request, self.template_name, {'game':game})
+        if request.user.is_authenticated():
+            return redirect('stock:admin_game_list')
+        return render(request, self.template_name)
 
-class AdminConfigView(View):
-    template_name = 'stock/admin_config.html'
+    @transaction.commit_on_success
+    def post(self, request):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            return self.render_response(request, 'Username or Password is incorrect. Please try again.')
+
+        if not user.is_active:
+            return self.render_response(request, 'User is disabled. Please try again.')
+            
+        login(request, user)
+        return redirect('stock:admin_game_list')
+
+    def render_response(self, request, error=None):
+        return render(request, self.template_name, {'error':error})
+
+class AdminGameListView(View):
+    template_name = 'stock/admin_game_list.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {'READY':Game.READY, 'RUNNING':Game.RUNNING, 'END':Game.END})
+
+class AdminGameCreateView(View):
+    template_name = 'stock/admin_game_form.html'
     
     def get(self, request):
-        game = Game.objects.get_active_game()
-        if game and game.start:
+        return render(request, self.template_name, {'game':json.dumps(Game(), cls=StockEncoder)})
+
+class AdminGameEditView(View):
+    template_name = 'stock/admin_game_form.html'
+    
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
+
+        if game.start:
             return HttpResponseBadRequest()
-        
-        if game is None:
-            game = Game()
         
         return render(request, self.template_name, {'game':json.dumps(game, cls=StockEncoder)})
 
 class AdminApiView(View):
     def get(self, request):
-        game = Game.objects.get_active_game()
-        return HttpResponse(json.dumps(game, cls=StockEncoder))
+        game_list = list(Game.objects.get_active_game())
+        return HttpResponse(json.dumps(game_list, cls=StockEncoder))
     
     def post(self, request):
         data = json.loads(request.body)
@@ -54,6 +86,7 @@ class AdminApiView(View):
         if game.state != Game.READY:
             return HttpResponseBadRequest()
         
+        game.name = data["name"]
         game.password = data["password"]
         game.init_price = data["init_price"]
         game.init_qty = data["init_qty"]
@@ -63,13 +96,13 @@ class AdminApiView(View):
         return HttpResponse('success')
 
 class AdminPortfolioApiView(View):
-    def get(self, request):
-        game = Game.objects.get_active_game()
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
         return HttpResponse(json.dumps(list(game.portfolio_set.values('pk','email').all()), cls=StockEncoder))
   
 class AdminGameApiView(View):
-    def post(self, request, action):
-        game = Game.objects.get_active_game()
+    def post(self, request, game_pk, action):
+        game = get_object_or_404(Game, pk=game_pk)
         if not game:
             return HttpResponseBadRequest()
         
@@ -85,46 +118,47 @@ class AdminGameApiView(View):
 class MarketView(View):
     template_name = 'stock/market.html'
 
-    def get(self, request):
-        return render(request, self.template_name)
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
+        return render(request, self.template_name, {'game':game})
 
 class MarketApiView(View):
-    def get(self, request):
-        market_list = list(Market.objects.all())
+    def get(self, request, game_pk):
+        market_list = list(Market.objects.filter(game=game_pk))
         return HttpResponse(json.dumps(market_list, cls=StockEncoder))
 
 class ClientView(View):
     template_name = 'stock/client.html'
     
     def get(self, request):
-        game = Game.objects.get_active_game() 
-        
-        if 'portfolio_id' in request.session:
-            portfolio_id = request.session['portfolio_id']
+        portfolio_id = request.session.get('portfolio_id')
+        if portfolio_id:
             try:
                 portfolio = Portfolio.objects.get(pk=portfolio_id)
-                if portfolio.game == game:
+                if portfolio.game.state != Game.END:
                     return redirect('stock:client_portfolio')
             except Portfolio.DoesNotExist:
                 pass
 
-        return self.render_response(request, game)
+        return self.render_response(request)
 
     @transaction.commit_on_success
     def post(self, request):
+        game_pk = request.POST.get('game')
         email = request.POST.get('email')
         password = request.POST.get('password')
         
-        game = Game.objects.get_active_game()
-        if not game:
-            return redirect(reverse('stock:client'))
-
+        game = get_object_or_404(Game, pk=game_pk)
+        
+        if game.state == Game.RUNNING:
+            return self.render_response(request, 'The game has already been started. Please try again later.')
+        
         if game.password != password:
-            return self.render_response(request, game, 'Password is incorrect. Please try again.')
+            return self.render_response(request, 'Password is incorrect. Please try again.')
         
         portfolio = Portfolio.objects.filter(game=game).filter(email__iexact=email)
         if len(portfolio) > 0:
-            return self.render_response(request, game, 'This email already exist.')
+            return self.render_response(request, 'This email already exist.')
         
         portfolio = Portfolio()
         portfolio.game = game
@@ -136,30 +170,37 @@ class ClientView(View):
         request.session['portfolio_id'] = portfolio.pk
         return redirect('stock:client_portfolio')
 
-    def render_response(self, request, game, error=None):
-        return render(request, self.template_name, {'game':game, 'error':error, 'RUNNING':Game.RUNNING})
+    def render_response(self, request, error=None):
+        game_list = Game.objects.get_active_game()
+        return render(request, self.template_name, {'game_list':game_list, 'error':error, 'RUNNING':Game.RUNNING})
 
 class ClientPortfolioView(View):
     template_name = 'stock/client_portfolio.html'
     
     def get(self, request):
-        portfolio_id = request.session['portfolio_id']
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+        portfolio_id = request.session.get('portfolio_id')
+        if not portfolio_id:
+            return redirect('stock:client')
             
+        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
         return render(request, self.template_name, { 'portfolio':portfolio, 'stock_list':json.dumps(Game.STOCK_LIST), 'END':Game.END })
 
 class ClientPortfolioApiView(View):
     def get(self, request):
-        portfolio_id = request.session['portfolio_id']
+        portfolio_id = request.session.get('portfolio_id')
+        if not portfolio_id:
+            return redirect('stock:client')
+        
         portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
         return HttpResponse(json.dumps(portfolio, cls=StockEncoder))
 
     def post(self, request):
-        data = json.loads(request.body)
-
-        portfolio_id = request.session['portfolio_id']
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+        portfolio_id = request.session.get('portfolio_id')
+        if not portfolio_id:
+            return redirect('stock:client')
         
+        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+        data = json.loads(request.body)
         try:
             order = Order()
             order.game = portfolio.game
@@ -178,7 +219,9 @@ class ClientPortfolioApiView(View):
 class ClientPortfolioCancelApiView(View):
     
     def post(self, request, order_pk):
-        portfolio_id = request.session['portfolio_id']
+        portfolio_id = request.session.get('portfolio_id')
+        if not portfolio_id:
+            return redirect('stock:client')
         portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
         
         order = Order.objects.get(pk=order_pk)
