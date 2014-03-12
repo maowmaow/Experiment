@@ -20,40 +20,41 @@
 	<div class="alert alert-info"><span ng-if="game_list.length==0">There is no active game session right now.</span> <a href="{{game_url}}/create" class="btn btn-default">Create New Game</a></div>
 	<div class="panel panel-default" ng-repeat="game in game_list track by game.pk">
 		<div class="panel-heading">
+			<button class="btn btn-default pull-right" type="button" ng-if="game.state==GAME_RUNNING" ng-click="openMarketBoard(game)">Open Market Board</button>
 			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
 		</div>
 		<div class="panel-body form-horizontal">
 			<div class="col-md-3">
 				<h4>Session Settings</h4>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Password</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.password}}</p></div>
+					<label class="col-sm-7 control-label">Session Password</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.password}}</p></div>
 				</div>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Session length</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.period|number}} mins.</p></div>
+					<label class="col-sm-7 control-label">Session length</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.period|number}} mins.</p></div>
 				</div>
 			</div>
 			<div class="col-md-3">
 				<h4>User Settings</h4>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Initial Cash</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.init_cash|currency}}</p></div>
+					<label class="col-sm-7 control-label">Initial Cash</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.init_cash|currency}}</p></div>
 				</div>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Total User</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.portfolio_count|number}}</p></div>
+					<label class="col-sm-7 control-label">Total User</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.portfolio_count|number}}</p></div>
 				</div>
 			</div>
 			<div class="col-md-3">
 				<h4>Stock Settings (A-J)</h4>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Initial Price</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.init_price|currency}}</p></div>
+					<label class="col-sm-7 control-label">Initial Price</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.init_price|currency}}</p></div>
 				</div>
 				<div class="form-group">
-					<label class="col-sm-6 control-label">Initial QTY</label>
-					<div class="col-sm-6"><p class="form-control-static">{{game.init_qty|number}}</p></div>
+					<label class="col-sm-7 control-label">Initial QTY</label>
+					<div class="col-sm-5"><p class="form-control-static">{{game.init_qty|number}}</p></div>
 				</div>
 			</div>
 			<div class="col-md-3 text-right">
@@ -73,6 +74,7 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	
 	$scope.poll_rate = 2000;
 	
+	$scope.market_url = '{% url "stock:market_base" %}';
 	$scope.game_url = '{% url "stock:admin_game_list" %}';
 	$scope.GAME_READY = {{READY}};
 	$scope.GAME_RUNNING = {{RUNNING}};
@@ -89,7 +91,7 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	$scope.startGame = function(game) {
 		gameSvc.save({game_pk:game.pk, action:'start'}, null, function(value) {
 			$scope.loadGame();
-			$window.open("{% url 'stock:market_base' %}/" + game.pk);
+			$scope.openMarketBoard(game);
 		});
 	};
 	
@@ -97,6 +99,10 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 		gameSvc.save({game_pk:game.pk, action:'end'}, null, function(value) {
 			$scope.loadGame();
 		});
+	};
+	
+	$scope.openMarketBoard = function(game) {
+		$window.open($scope.market_url + "/" + game.pk);
 	};
 	
 	$interval(function() {

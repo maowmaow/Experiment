@@ -29,7 +29,8 @@
 </head>
 <body>
 <section class="container">
-	<h1>Market Board</h1>
+	<h1 class="pull-left">Market Board - {{game.name}} <span class="label label-danger">Game Ended</span></h1>
+	<h2 class="pull-right">Session Password: {{game.password}}</h2>
 	{% verbatim %}
 	<table class="table table-bordered table-condensed" ng-app="stockApp" ng-controller="marketController">
 		<thead>
@@ -55,12 +56,15 @@
 </section>
 <script>
 stockApp.controller('marketController', ['$scope', '$window', '$interval', 'marketSvc', function($scope, $window, $interval, marketSvc) {
+	
 	$scope.poll_rate = 400;
+	$scope.END = {{END}};
 	
 	$scope.market_list = [];
+	$scope.game_state = {{game.state}};
 
 	$scope.loadData = function() {
-		marketSvc.query({ game_pk:{{game.pk}} }, function(value) {
+		marketSvc.query({ game_pk:{{game.pk}} }, function(value, responseHeaders) {
 			for (var i=0; i<value.length; i++) {
 				if ($scope.market_list[i]) {
 					angular.extend($scope.market_list[i], value[i]);	
@@ -68,12 +72,19 @@ stockApp.controller('marketController', ['$scope', '$window', '$interval', 'mark
 					$scope.market_list[i] = value[i];
 				}
 			}
+			$scope.game_state = responseHeaders('game_state');
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
 		});
 	};
 	
-	$interval(function() { $scope.loadData(); }, $scope.poll_rate);
+	$scope.$watch('game_state', function(newValue) {
+		if (newValue == $scope.END) {
+			$interval.cancel($scope.loop_handle);
+		}
+	});
+	
+	$scope.loop_handle = $interval(function() { $scope.loadData(); }, $scope.poll_rate);
 }]);
 stockApp.controller('stockController', ['$scope', function($scope) {
 	

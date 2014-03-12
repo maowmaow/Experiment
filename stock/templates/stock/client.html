@@ -16,7 +16,7 @@
 	<section class="container">
 		<h1>Welcome to Stock Trading game!</h1>
 		{% if not game_list %}
-			<div class="alert alert-info">There is no active game session right now. Please try again later.</div>
+			<div class="alert alert-info">There is no active game session right now. Please try again later. <a href="javascript:window.location.reload()" class="btn btn-default">Refresh</a></div>
 		{% else %}
 			<form action="{% url 'stock:client' %}" method="post" role="form" class="form-inline">
 				<div class="panel panel-default" style="width:500px; margin:100px auto 0;">
@@ -32,7 +32,7 @@
 					<div class="panel-body">
 						{% csrf_token %}
 						<input name="email" placeholder="email" type="email" class="form-control" />
-						<input name="password" placeholder="password" type="password" class="form-control" />
+						<input name="password" placeholder="session password" type="password" class="form-control" />
 						<button class="btn btn-default">Submit</button>
 						{% if error %}<p class="text-danger">{{error}}</p>{% endif %}
 					</div>

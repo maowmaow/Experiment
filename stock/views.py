@@ -120,12 +120,16 @@ class MarketView(View):
 
     def get(self, request, game_pk):
         game = get_object_or_404(Game, pk=game_pk)
-        return render(request, self.template_name, {'game':game})
+        return render(request, self.template_name, {'game':game,'END':Game.END})
 
 class MarketApiView(View):
     def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
         market_list = list(Market.objects.filter(game=game_pk))
-        return HttpResponse(json.dumps(market_list, cls=StockEncoder))
+        
+        response = HttpResponse(json.dumps(market_list, cls=StockEncoder))
+        response['game_state'] = game.state
+        return response
 
 class ClientView(View):
     template_name = 'stock/client.html'

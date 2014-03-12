@@ -16,10 +16,10 @@ class GameException(Exception):
 class GameManager(models.Manager):
     
     def get_active_game(self):
-        return self.get_query_set().filter(end__isnull=True)
+        return self.get_query_set().filter(end__isnull=True).exclude(end_target__lte=datetime.datetime.now())
     
     def get_history(self):
-        return self.get_query_set().filter(end__isnull=False)
+        return self.get_query_set().filter(Q(end__isnull=False) | Q(end_target__lte=datetime.datetime.now()))
 
 class Game(models.Model):
     
@@ -38,6 +38,7 @@ class Game(models.Model):
 
     start = models.DateTimeField(blank=True, null=True)
     end = models.DateTimeField(blank=True, null=True)
+    end_target = models.DateTimeField(blank=True, null=True)
     
     objects = GameManager()
     
@@ -48,7 +49,7 @@ class Game(models.Model):
     def state(self):
         if self.start is None:
             return Game.READY
-        elif self.end is None:
+        elif self.end is None and self.end_target > datetime.datetime.now():
             return Game.RUNNING
         else:
             return Game.END
@@ -57,6 +58,7 @@ class Game(models.Model):
     def start_game(self):
         if self.state == Game.READY:
             self.start = datetime.datetime.now()
+            self.end_target = self.start + datetime.timedelta(minutes=self.period)
             self.save()
             
             for p in self.portfolio_set.all():
