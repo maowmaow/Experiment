@@ -18,9 +18,9 @@
 	<h1>Welcome to Stock Trading game!</h1>
 	{% verbatim %}
 	<div class="alert alert-info"><span ng-if="game_list.length==0">There is no active game session right now.</span> <a href="{{game_url}}/create" class="btn btn-default">Create New Game</a></div>
-	<div class="panel panel-default" ng-repeat="game in game_list track by game.pk">
+	<div class="panel" ng-class="game.style" ng-repeat="game in game_list track by game.pk">
 		<div class="panel-heading">
-			<button class="btn btn-default pull-right" type="button" ng-if="game.state==GAME_RUNNING" ng-click="openMarketBoard(game)">Open Market Board</button>
+			<button class="btn btn-default pull-right" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
 			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
 		</div>
 		<div class="panel-body form-horizontal">
@@ -61,6 +61,7 @@
 				<p ng-if="game.state==GAME_READY"><button type="button" ng-click="startGame(game)" class="btn btn-lg btn-primary">Start Game</button></p>
 				<p ng-if="game.state==GAME_RUNNING">Started on {{game.start|date:'h:mm:ss a'}}</p>
 				<p ng-if="game.state==GAME_RUNNING"><button type="button" ng-click="stopGame(game)" class="btn btn-lg btn-danger">End Game</button></p>
+				<p ng-if="game.state==GAME_END"><span class="label label-danger">Game Ended</span></p>
 			</div>
 		</div>
 	</div>
@@ -85,6 +86,20 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	$scope.loadGame = function() {
 		gameSvc.query(null, function(value) {
 			$scope.game_list = value;
+			
+			angular.forEach($scope.game_list, function(game) {
+				switch (game.state) {
+				case {{READY}}:
+					game.style = 'panel-default'; 
+				break;
+				case {{RUNNING}}:
+					game.style = 'panel-success';
+				break;
+				case {{END}}:
+					game.style = 'panel-danger'; 
+				break;
+				}
+			});
 		});
 	};
 	
@@ -104,6 +119,8 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	$scope.openMarketBoard = function(game) {
 		$window.open($scope.market_url + "/" + game.pk);
 	};
+	
+	$scope.loadGame();
 	
 	$interval(function() {
 		$scope.loadGame();	

@@ -2,7 +2,8 @@ import json
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage, Page
 from django.db.models.query_utils import Q
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect,\
+    render_to_response
 from django.views.generic.base import View
 from django.core.urlresolvers import resolve, reverse
 from django.http.response import HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
@@ -72,7 +73,7 @@ class AdminGameEditView(View):
 
 class AdminApiView(View):
     def get(self, request):
-        game_list = list(Game.objects.get_active_game())
+        game_list = list(Game.objects.all())
         return HttpResponse(json.dumps(game_list, cls=StockEncoder))
     
     def post(self, request):
@@ -95,6 +96,11 @@ class AdminApiView(View):
         game.save()
         return HttpResponse('success')
 
+class AdminActiveGameApiView(View):
+    def get(self, request):
+        game_list = list(Game.objects.get_active_game())
+        return HttpResponse(json.dumps(game_list, cls=StockEncoder))
+    
 class AdminPortfolioApiView(View):
     def get(self, request, game_pk):
         game = get_object_or_404(Game, pk=game_pk)
@@ -120,7 +126,7 @@ class MarketView(View):
 
     def get(self, request, game_pk):
         game = get_object_or_404(Game, pk=game_pk)
-        return render(request, self.template_name, {'game':game,'END':Game.END})
+        return render(request, self.template_name, {'game':game,'END':Game.END,'stock_list':json.dumps(Game.STOCK_LIST)})
 
 class MarketApiView(View):
     def get(self, request, game_pk):
@@ -130,6 +136,17 @@ class MarketApiView(View):
         response = HttpResponse(json.dumps(market_list, cls=StockEncoder))
         response['game_state'] = game.state
         return response
+
+class MarketScoreView(View):
+    template_name = 'stock/score.html'
+    def get(self, request, game_pk, stock):
+        game = get_object_or_404(Game, pk=game_pk)
+        try:
+            price = Decimal(request.GET.get('price'))
+        except Exception:
+            price = Decimal(0)
+        portfolio_list = Portfolio.objects.calculate_score(game, stock, price)
+        return render(request, self.template_name, {'game':game, 'portfolio_list':portfolio_list})
 
 class ClientView(View):
     template_name = 'stock/client.html'

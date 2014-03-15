@@ -28,11 +28,11 @@
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
 </head>
 <body>
-<section class="container">
-	<h1 class="pull-left">Market Board - {{game.name}} <span class="label label-danger">Game Ended</span></h1>
-	<h2 class="pull-right">Session Password: {{game.password}}</h2>
+<section class="container" ng-app="stockApp" ng-controller="marketController">
 	{% verbatim %}
-	<table class="table table-bordered table-condensed" ng-app="stockApp" ng-controller="marketController">
+	<h1 class="pull-left">Market Board - {{game_name}} <span class="label label-danger" ng-if="game_state==END">Game Ended</span></h1>
+	<h2 class="pull-right">Session Password: {{game_password}}</h2>
+	<table class="table table-bordered table-condensed">
 		<thead>
 			<tr>
 				<th>Stock Name</th>
@@ -52,6 +52,21 @@
 			</tr>
 		</tbody>
 	</table>
+	<div class="panel panel-primary" ng-if="game_state==END">
+		<div class="panel-body">
+			<form role="form" name="scoreForm" ng-submit="showScore()">
+				<div class="form-group">
+					<label for="stock">Which is the stock that has the correct outcome?</label>
+    				<select name="stock" class="form-control" style="width:100px" ng-model="form.stock" ng-options="s for s in stock_list" required></select>
+				</div>
+				<div class="form-group">
+					<label for="stock">How is that outcome worth?</label>
+    				<input name="price" placeholder="Price" type="number" class="form-control" style="width:100px" ng-model="form.price" required smart-float />
+				</div>
+				 <button type="submit" class="btn btn-primary">Show user score</button>
+			</form>
+		</div>
+	</div>
 	{% endverbatim %}
 </section>
 <script>
@@ -62,6 +77,13 @@ stockApp.controller('marketController', ['$scope', '$window', '$interval', 'mark
 	
 	$scope.market_list = [];
 	$scope.game_state = {{game.state}};
+	$scope.game_name = '{{game.name}}';
+	$scope.game_password = '{{game.password}}';
+	
+	$scope.stock_list = {{stock_list|safe}};
+	
+	$scope.form = {};
+	$scope.formCtrl = {stock:null,price:null};
 
 	$scope.loadData = function() {
 		marketSvc.query({ game_pk:{{game.pk}} }, function(value, responseHeaders) {
@@ -76,6 +98,10 @@ stockApp.controller('marketController', ['$scope', '$window', '$interval', 'mark
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
 		});
+	};
+	
+	$scope.showScore = function() {
+		window.open("{% url 'stock:market' game.pk %}/" + $scope.form.stock + "?price=" + $scope.form.price);
 	};
 	
 	$scope.$watch('game_state', function(newValue) {

@@ -81,11 +81,17 @@ class Game(models.Model):
             self.end = datetime.datetime.now()
             self.save()
 
+class PortfolioManager(models.Manager):
+    def calculate_score(self, game, stock, price):
+        return self.raw('SELECT p.*, d.stock, d.qty, p.cash + d.qty * ' + str(price) + ' as score FROM stock_portfolio p inner join stock_portfoliodetail d on p.id=d.portfolio_id where p.game_id=%s and d.stock=%s order by p.cash + d.qty * ' + str(price) + ' desc', [game.pk, stock, ])
+
 class Portfolio(models.Model):
     game = models.ForeignKey(Game)
     email = models.CharField(max_length=50)
     cash = models.DecimalField(decimal_places=2, max_digits=12, default=0)
     cash_available = models.DecimalField(decimal_places=2, max_digits=12, default=0)
+    
+    objects = PortfolioManager()
     
     class Meta:
         ordering = ['email']
