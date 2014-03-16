@@ -228,8 +228,8 @@ class ClientPortfolioApiView(View):
             order.portfolio = portfolio
             order.type = Order.parse_type(data['type'])
             order.stock = data['stock']
-            order.price = data['price'] if not data['market_price'] else 0
-            order.market_price = data['market_price']
+            order.price = Decimal(data['price']) if not data['market_price'] else 0
+            order.market_price = Decimal(data['market_price'])
             order.qty = data['qty']
             order.place_order()
         except GameException as e:
