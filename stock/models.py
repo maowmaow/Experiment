@@ -30,7 +30,7 @@ class Game(models.Model):
     END = 3
     
     name = models.CharField(max_length=100, blank=True)
-    password = models.CharField(max_length=50, blank=True)
+    password = models.CharField(max_length=50, unique=True)
     init_price = models.DecimalField(decimal_places=2, max_digits=7, default=Decimal(100))
     init_qty = models.PositiveIntegerField(default=10)
     init_cash = models.DecimalField(decimal_places=2, max_digits=12, default=Decimal(1000))

@@ -17,51 +17,76 @@
 <section class="container" ng-controller="gameController">
 	<h1>Welcome to Stock Trading game!</h1>
 	{% verbatim %}
-	<div class="alert alert-info"><span ng-if="game_list.length==0">There is no active game session right now.</span> <a href="{{game_url}}/create" class="btn btn-default">Create New Game</a></div>
-	<div class="panel" ng-class="game.style" ng-repeat="game in game_list track by game.pk">
+	<nav class="navbar navbar-default" style="background-color: #d9edf7;border-color: #bce8f1;color: #31708f;">
+		<p class="navbar-text" ng-if="game_active_count==0" style="color: #31708f;">There is no active game session right now.</p>
+		<form class="navbar-form">
+			<a href="{{game_url}}/create" class="btn btn-default">Create New Game</a>
+			<div class="checkbox pull-right" style="padding-left: 10px; line-height: 34px;">
+				<label><input type="checkbox" ng-model="show_all" /> Show All Game</label>
+			</div>
+		</form>
+	</nav>
+	<div class="panel" ng-class="game.style" ng-repeat="game in game_list track by game.pk" ng-controller="gameItemController">
 		<div class="panel-heading">
-			<button class="btn btn-default pull-right" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
+			<div class="pull-right">
+				<button class="btn btn-default" type="button" ng-click="deleteGame(game)" ng-if="game.state==GAME_END"><span class="glyphicon glyphicon-trash"></span></button>
+				<button class="btn btn-default" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
+			</div>
 			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
 		</div>
 		<div class="panel-body form-horizontal">
-			<div class="col-md-3">
-				<h4>Session Settings</h4>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Session Password</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.password}}</p></div>
+			<div class="row">
+				<div class="col-md-3">
+					<h4>Session Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Session Password</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.password}}</p></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Session length</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.period|number}} mins.</p></div>
+					</div>
 				</div>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Session length</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.period|number}} mins.</p></div>
+				<div class="col-md-3">
+					<h4>User Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Initial Cash</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.init_cash|currency}}</p></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-7 control-label"><a ng-click="toggleUser(game)"><span class="glyphicon glyphicon-info-sign"></span></a> Total User</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.portfolio_count|number}}</p></div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<h4>Stock Settings (A-J)</h4>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Initial Price</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.init_price|currency}}</p></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Initial QTY</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.init_qty|number}}</p></div>
+					</div>
+				</div>
+				<div class="col-md-3 text-right">
+					<p ng-if="game.state==GAME_READY"><button type="button" ng-click="startGame(game)" class="btn btn-lg btn-primary">Start Game</button></p>
+					<p ng-if="game.state==GAME_RUNNING">Started on {{game.start|date:'h:mm:ss a'}}</p>
+					<p ng-if="game.state==GAME_RUNNING"><button type="button" ng-click="stopGame(game)" class="btn btn-lg btn-danger">End Game</button></p>
+					<p ng-if="game.state==GAME_END">
+						<span class="label label-danger">Game Ended</span><br/>
+					</p>
 				</div>
 			</div>
-			<div class="col-md-3">
-				<h4>User Settings</h4>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Initial Cash</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.init_cash|currency}}</p></div>
+		</div>
+		<div class="panel-body" ng-show="game.show_user && game.user_list.length > 0">
+			<div class="well">
+				<h4 style="margin-top:0">Joined User</h4>
+				<div class="row">
+				<ol>
+					<li class="col-md-3" ng-repeat="user in game.user_list track by user.pk">{{user.email}}</li>
+				</ol>
 				</div>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Total User</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.portfolio_count|number}}</p></div>
-				</div>
-			</div>
-			<div class="col-md-3">
-				<h4>Stock Settings (A-J)</h4>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Initial Price</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.init_price|currency}}</p></div>
-				</div>
-				<div class="form-group">
-					<label class="col-sm-7 control-label">Initial QTY</label>
-					<div class="col-sm-5"><p class="form-control-static">{{game.init_qty|number}}</p></div>
-				</div>
-			</div>
-			<div class="col-md-3 text-right">
-				<p ng-if="game.state==GAME_READY"><button type="button" ng-click="startGame(game)" class="btn btn-lg btn-primary">Start Game</button></p>
-				<p ng-if="game.state==GAME_RUNNING">Started on {{game.start|date:'h:mm:ss a'}}</p>
-				<p ng-if="game.state==GAME_RUNNING"><button type="button" ng-click="stopGame(game)" class="btn btn-lg btn-danger">End Game</button></p>
-				<p ng-if="game.state==GAME_END"><span class="label label-danger">Game Ended</span></p>
 			</div>
 		</div>
 	</div>
@@ -81,25 +106,34 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	$scope.GAME_RUNNING = {{RUNNING}};
 	$scope.GAME_END = {{END}};
 	
+	$scope.show_all = false;
 	$scope.game_list = [];
+	$scope.game_active_count = 0;
 	
 	$scope.loadGame = function() {
-		gameSvc.query(null, function(value) {
-			$scope.game_list = value;
-			
-			angular.forEach($scope.game_list, function(game) {
+		gameSvc.query( $scope.show_all? null: {'game_pk':'active'} , function(value) {
+			$scope.game_active_count = 0;
+			angular.forEach(value, function(game, index) {
+				if (index < $scope.game_list.length) {
+					angular.extend($scope.game_list[index], game);
+				} else {
+					$scope.game_list[index] = game;
+				}
 				switch (game.state) {
 				case {{READY}}:
-					game.style = 'panel-default'; 
+					$scope.game_list[index].style = 'panel-default'; 
+					$scope.game_active_count++;
 				break;
 				case {{RUNNING}}:
-					game.style = 'panel-success';
+					$scope.game_list[index].style = 'panel-success';
+					$scope.game_active_count++;
 				break;
 				case {{END}}:
-					game.style = 'panel-danger'; 
+					$scope.game_list[index].style = 'panel-danger'; 
 				break;
 				}
 			});
+			$scope.game_list.length = value.length;
 		});
 	};
 	
@@ -116,16 +150,44 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 		});
 	};
 	
+	$scope.deleteGame = function(game) {
+		gameSvc.save({game_pk:game.pk, action:'delete'}, null, function(value) {
+			$scope.loadGame();
+		});
+	};
+	
+	$scope.toggleUser = function(game) {
+		if (game.show_user)
+			game.show_user=false;
+		else
+			game.show_user=true;
+	};
+	
+	$scope.loadUser = function(game) {
+		gameSvc.query({game_pk:game.pk, action:'portfolio'}, function(value) {
+			game.user_list = value;
+		});
+	};
+	
 	$scope.openMarketBoard = function(game) {
 		$window.open($scope.market_url + "/" + game.pk);
 	};
 	
-	$scope.loadGame();
+	$scope.$watch('show_all', function(newValue) {
+		$scope.loadGame();	
+	});
 	
 	$interval(function() {
 		$scope.loadGame();	
 	}, $scope.poll_rate);
 	
+}]);
+stockApp.controller('gameItemController', ['$scope', '$window', '$interval', 'gameSvc', function($scope, $window, $interval, gameSvc) {
+	$scope.$watch('game.portfolio_count + game.show_user', function(newValue) {
+		if ($scope.game.show_user) {
+			$scope.loadUser($scope.game);
+		}
+	});
 }]);
 </script>
 </body>

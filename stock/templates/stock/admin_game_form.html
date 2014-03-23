@@ -30,7 +30,7 @@
 					<h4>Session Settings</h4>
 					<div class="form-group">
 						<label class="col-sm-5 control-label">Password</label>
-						<div class="col-sm-6"><input class="form-control" type="text" placeholder="Password" ng-model="form.password" /></div>
+						<div class="col-sm-6"><input class="form-control" type="text" placeholder="Password" ng-model="form.password" required /></div>
 					</div>
 					<div class="form-group">
 						<label class="col-sm-5 control-label">Session length</label>
@@ -55,6 +55,7 @@
 						<div class="col-sm-6"><input class="form-control" type="number" placeholder="QTY" min="0" ng-model="form.init_qty" /></div>
 					</div>
 				</div>
+				<p class="text-center text-danger">{{error_msg}}</p>
 				<p class="text-center"><button class="btn btn-lg btn-primary">Save</button></p>
 			</div>
 		</div>
@@ -72,6 +73,8 @@ stockApp.controller('stockAdminController', ['$scope', '$http', '$window', 'game
 	$scope.save = function() {
 		gameSvc.save(null, $scope.form, function(value) {
 			$window.location = "{% url 'stock:admin_game_list' %}";
+		}, function(httpResponse) {
+			$scope.error_msg = httpResponse.data;
 		});
 	}
 	

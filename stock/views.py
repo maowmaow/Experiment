@@ -13,6 +13,7 @@ from decimal import Decimal
 from django.db import transaction, connection
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.db.utils import IntegrityError
 
 class IndexView(View):
     template_name = 'stock/index.html'
@@ -76,6 +77,7 @@ class AdminApiView(View):
         game_list = list(Game.objects.all())
         return HttpResponse(json.dumps(game_list, cls=StockEncoder))
     
+    @transaction.commit_on_success
     def post(self, request):
         data = json.loads(request.body)
 
@@ -93,8 +95,12 @@ class AdminApiView(View):
         game.init_qty = data["init_qty"]
         game.init_cash = data["init_cash"]
         game.period = data["period"]
-        game.save()
-        return HttpResponse('success')
+        
+        try:
+            game.save()
+            return HttpResponse('success')
+        except IntegrityError:
+            return HttpResponseBadRequest('A game with password "' + game.password + '" already exists.')
 
 class AdminActiveGameApiView(View):
     def get(self, request):
@@ -116,6 +122,8 @@ class AdminGameApiView(View):
             game.start_game()
         elif action == 'end':
             game.end_game()
+        elif action == 'delete':
+            game.delete()
         else:
             return HttpResponseBadRequest()
         
@@ -165,11 +173,13 @@ class ClientView(View):
 
     @transaction.commit_on_success
     def post(self, request):
-        game_pk = request.POST.get('game')
         email = request.POST.get('email')
         password = request.POST.get('password')
         
-        game = get_object_or_404(Game, pk=game_pk)
+        try :
+            game = Game.objects.get(password=password)
+        except Game.DoesNotExist:
+            return self.render_response(request, 'Password is incorrect. Please try again.')
         
         if game.state == Game.RUNNING:
             return self.render_response(request, 'The game has already been started. Please try again later.')
