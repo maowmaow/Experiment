@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+{% load staticfiles %}
+{% load humanize %}
+<title>Ultimatum game - Admin view</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="all" />
+
+<script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
+<script src="{% static 'js/angular.min.js' %}"></script>
+<script src="{% static 'js/angular-cookies.min.js' %}"></script>
+<script src="{% static 'js/angular-resource.min.js' %}"></script>
+<script src="{% static 'ultimatum/js/app-ultimatum.js' %}"></script>
+</head>
+<body ng-app="ultimatumApp">
+<section class="container">
+	<h1>Welcome to Ultimatum game!</h1>
+	<div class="panel panel-default" style="width:500px; margin:100px auto 0;">
+		<div class="panel-heading">
+			<h3 class="panel-title">Please log in</h3>
+		</div>
+		<div class="panel-body">
+			<form action="{% url 'stock:admin' %}" method="post" role="form" class="form-inline">
+				{% csrf_token %}
+				<input name="username" placeholder="username" type="text" class="form-control" />
+				<input name="password" placeholder="password" type="password" class="form-control" />
+				<button class="btn btn-default">Submit</button>
+				{% if error %}<p class="text-danger">{{error}}</p>{% endif %}
+			</form>
+		</div>
+	</div>
+</section>
+</body>
+</html>

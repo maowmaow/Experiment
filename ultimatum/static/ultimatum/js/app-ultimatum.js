@@ -10,10 +10,10 @@ ultimatumApp.run(function($http, $cookies) {
 	$http.defaults.headers.delete = { 'X-CSRFToken' : $cookies['csrftoken'] };
 });
 
-ultimatumApp.factory('roomSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/:room_pk/:action');
+ultimatumApp.factory('gameSvc', ['$resource', function($resource) {
+	return $resource('/ultimatum/api/admin/game/:game_pk/:action');
 }]);
 
-ultimatumApp.factory('bidSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/:room_pk/bid/:bid_pk');
+ultimatumApp.factory('clientSvc', ['$resource', function($resource) {
+	return $resource('/ultimatum/api/client/:bid_pk');
 }]);

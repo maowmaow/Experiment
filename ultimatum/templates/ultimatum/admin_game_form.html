@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+{% load staticfiles %}
+<title>Ultimatum game</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="all" />
+
+<script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
+<script src="{% static 'js/angular.min.js' %}"></script>
+<script src="{% static 'js/angular-cookies.min.js' %}"></script>
+<script src="{% static 'js/angular-resource.min.js' %}"></script>
+<script src="{% static 'ultimatum/js/app-ultimatum.js' %}"></script>
+</head>
+<body ng-app="ultimatumApp">
+<header>
+	{% csrf_token %}
+</header>
+<section class="container" ng-controller="ultimatumAdminController">
+	<h1>Game Settings</h1>
+	{% verbatim %}
+	<div class="alert alert-info" ng-if="!form.pk">Create a new game.</div>
+	<form class="form-horizontal" role="form" ng-submit="save()">
+		<div class="panel panel-default">
+			<div class="panel-heading form-inline">
+				<h4>Game Setting: <input class="form-control" type="text" placeholder="Name" ng-model="form.name" style="width:200px" /></h4>
+			</div>
+			<div class="panel-body">
+				<div class="col-md-4">
+					<h4>Session Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-5 control-label">Password</label>
+						<div class="col-sm-6"><input class="form-control" type="text" placeholder="Password" ng-model="form.password" required /></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-5 control-label"># of iteration</label>
+						<div class="col-sm-6"><input class="form-control" type="number" min="10" step="5" placeholder="round" ng-model="form.iteration" /></div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<h4>User Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-5 control-label">Money to Share</label>
+						<div class="col-sm-6"><input class="form-control" type="text" placeholder="Money to Share" smart-float  ng-model="form.pot_size" /></div>
+					</div>
+				</div>
+				<p class="text-center text-danger">{{error_msg}}</p>
+				<p class="text-center"><button class="btn btn-lg btn-primary">Save</button></p>
+			</div>
+		</div>
+	</form>
+	{% endverbatim %}
+</section>
+<footer>
+	
+</footer>
+<script>
+ultimatumApp.controller('ultimatumAdminController', ['$scope', '$http', '$window', 'gameSvc', function($scope, $http, $window, gameSvc) {
+	
+	$scope.form = {{game|safe}};
+	
+	$scope.save = function() {
+		gameSvc.save(null, $scope.form, function(value) {
+			$window.location = "{% url 'ultimatum:admin_game_list' %}";
+		}, function(httpResponse) {
+			$scope.error_msg = httpResponse.data;
+		});
+	}
+	
+}]);
+
+</script>
+</body>
+</html>

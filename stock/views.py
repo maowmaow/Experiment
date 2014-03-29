@@ -111,7 +111,7 @@ class AdminPortfolioApiView(View):
     def get(self, request, game_pk):
         game = get_object_or_404(Game, pk=game_pk)
         return HttpResponse(json.dumps(list(game.portfolio_set.values('pk','email').all()), cls=StockEncoder))
-  
+
 class AdminGameApiView(View):
     def post(self, request, game_pk, action):
         game = get_object_or_404(Game, pk=game_pk)

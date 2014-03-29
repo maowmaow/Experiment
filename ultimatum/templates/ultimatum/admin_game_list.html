@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+{% load staticfiles %}
+{% load humanize %}
+<title>Ultimatum game - Admin view</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="all" />
+
+<script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
+<script src="{% static 'js/angular.min.js' %}"></script>
+<script src="{% static 'js/angular-cookies.min.js' %}"></script>
+<script src="{% static 'js/angular-resource.min.js' %}"></script>
+<script src="{% static 'ultimatum/js/app-ultimatum.js' %}"></script>
+</head>
+<body ng-app="ultimatumApp">
+<section class="container" ng-controller="gameController">
+	<h1>Welcome to Ultimatum game!</h1>
+	{% verbatim %}
+	<nav class="navbar navbar-default" style="background-color: #d9edf7;border-color: #bce8f1;color: #31708f;">
+		<p class="navbar-text" ng-if="game_active_count==0" style="color: #31708f;">There is no active game session right now.</p>
+		<form class="navbar-form">
+			<a href="{{game_url}}/create" class="btn btn-default">Create New Game</a>
+			<div class="checkbox pull-right" style="padding-left: 10px; line-height: 34px;">
+				<label><input type="checkbox" ng-model="show_all" /> Show All Game</label>
+			</div>
+		</form>
+	</nav>
+	<div class="panel" ng-class="game.style" ng-repeat="game in game_list track by game.pk" ng-controller="gameItemController">
+		<div class="panel-heading">
+			<div class="pull-right">
+				<button class="btn btn-default" type="button" ng-click="deleteGame(game)" ng-if="game.state==GAME_END"><span class="glyphicon glyphicon-trash"></span></button>
+				<button class="btn btn-default" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
+			</div>
+			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
+		</div>
+		<div class="panel-body form-horizontal">
+			<div class="row">
+				<div class="col-md-4">
+					<h4>Session Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Session Password</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.password}}</p></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-7 control-label"># of iteration</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.iteration|number}}</p></div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<h4>User Settings</h4>
+					<div class="form-group">
+						<label class="col-sm-7 control-label">Money to Share</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.pot_size|number}}</p></div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-7 control-label"><a ng-click="toggleUser(game)"><span class="glyphicon glyphicon-info-sign"></span></a> Total User</label>
+						<div class="col-sm-5"><p class="form-control-static">{{game.player_count|number}}</p></div>
+					</div>
+				</div>
+				<div class="col-md-4 text-right">
+					<p ng-if="game.state==GAME_READY"><button type="button" ng-click="startGame(game)" class="btn btn-lg btn-primary">Start Game</button></p>
+					<p ng-if="game.state==GAME_RUNNING">Started on {{game.start|date:'h:mm:ss a'}}</p>
+					<p ng-if="game.state==GAME_RUNNING"><button type="button" ng-click="stopGame(game)" class="btn btn-lg btn-danger">End Game</button></p>
+					<p ng-if="game.state==GAME_END">
+						<span class="label label-danger">Game Ended</span><br/>
+					</p>
+				</div>
+			</div>
+		</div>
+		<div class="panel-body" ng-show="game.show_user && game.user_list.length > 0">
+			<div class="well">
+				<h4 style="margin-top:0">Joined User</h4>
+				<div class="row">
+				<ol>
+					<li class="col-md-3" ng-repeat="user in game.user_list track by user.pk">{{user.email}}</li>
+				</ol>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% endverbatim %}
+</section>
+<footer>
+	
+</footer>
+<script>
+ultimatumApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSvc', function($scope, $window, $interval, gameSvc) {
+	
+	$scope.poll_rate = 2000;
+	
+	$scope.market_url = '{% url "stock:market_base" %}';
+	$scope.game_url = '{% url "ultimatum:admin_game_list" %}';
+	$scope.GAME_READY = {{READY}};
+	$scope.GAME_RUNNING = {{RUNNING}};
+	$scope.GAME_END = {{END}};
+	
+	$scope.show_all = false;
+	$scope.game_list = [];
+	$scope.game_active_count = 0;
+	
+	$scope.loadGame = function() {
+		gameSvc.query( $scope.show_all? null: {'game_pk':'active'} , function(value) {
+			$scope.game_active_count = 0;
+			angular.forEach(value, function(game, index) {
+				if (index < $scope.game_list.length) {
+					angular.extend($scope.game_list[index], game);
+				} else {
+					$scope.game_list[index] = game;
+				}
+				switch (game.state) {
+				case {{READY}}:
+					$scope.game_list[index].style = 'panel-default'; 
+					$scope.game_active_count++;
+				break;
+				case {{RUNNING}}:
+					$scope.game_list[index].style = 'panel-success';
+					$scope.game_active_count++;
+				break;
+				case {{END}}:
+					$scope.game_list[index].style = 'panel-danger'; 
+				break;
+				}
+			});
+			$scope.game_list.length = value.length;
+		});
+	};
+	
+	$scope.startGame = function(game) {
+		gameSvc.save({game_pk:game.pk, action:'start'}, null, function(value) {
+			$scope.loadGame();
+		});
+	};
+	
+	$scope.stopGame = function(game) {
+		gameSvc.save({game_pk:game.pk, action:'end'}, null, function(value) {
+			$scope.loadGame();
+		});
+	};
+	
+	$scope.deleteGame = function(game) {
+		gameSvc.save({game_pk:game.pk, action:'delete'}, null, function(value) {
+			$scope.loadGame();
+		});
+	};
+	
+	$scope.toggleUser = function(game) {
+		if (game.show_user)
+			game.show_user=false;
+		else
+			game.show_user=true;
+	};
+	
+	$scope.loadUser = function(game) {
+		gameSvc.query({game_pk:game.pk, action:'player'}, function(value) {
+			game.user_list = value;
+		});
+	};
+	
+	$scope.openMarketBoard = function(game) {
+		$window.open($scope.market_url + "/" + game.pk);
+	};
+	
+	$scope.$watch('show_all', function(newValue) {
+		$scope.loadGame();	
+	});
+	
+	$interval(function() {
+		$scope.loadGame();	
+	}, $scope.poll_rate);
+	
+}]);
+ultimatumApp.controller('gameItemController', ['$scope', '$window', '$interval', 'gameSvc', function($scope, $window, $interval, gameSvc) {
+	$scope.$watch('game.portfolio_count + game.show_user', function(newValue) {
+		if ($scope.game.show_user) {
+			$scope.loadUser($scope.game);
+		}
+	});
+}]);
+</script>
+</body>
+</html>

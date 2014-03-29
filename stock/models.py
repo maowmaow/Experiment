@@ -363,7 +363,7 @@ class StockEncoder(JSONEncoder):
                         state = obj.state,
                         portfolio_count = len(obj.portfolio_set.all()),
                         )
-        if isinstance(obj, Portfolio):
+        elif isinstance(obj, Portfolio):
             return dict(pk=obj.pk,
                         cash=str(obj.cash),
                         cash_available=str(obj.cash_available),

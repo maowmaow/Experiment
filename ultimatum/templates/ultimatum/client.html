@@ -13,16 +13,26 @@
 <script src="{% static 'ultimatum/js/app-ultimatum.js' %}"></script>
 </head>
 <body>
-<section class="container">
-	<h1>Please enter your name</h1>
-	<form action="{% url 'ultimatum:client' %}" method="post" >
-		{% csrf_token %}
-		<input name="name" />
-		<button>Submit</button>
-	</form>
-</section>
-<footer>
-	
-</footer>
+	<section class="container">
+		<h1>Welcome to Ultimatum game!</h1>
+		{% if not game_list %}
+			<div class="alert alert-info">There is no active game session right now. Please try again later. <a href="javascript:window.location.reload()" class="btn btn-default">Refresh</a></div>
+		{% else %}
+			<form action="{% url 'ultimatum:client' %}" method="post" role="form" class="form-inline">
+				<div class="panel panel-default" style="width:500px; margin:100px auto 0;">
+					<div class="panel-heading">
+						<h3 class="panel-title">Join game</h3>
+					</div>
+					<div class="panel-body">
+						{% csrf_token %}
+						<input name="email" placeholder="email" type="email" class="form-control" />
+						<input name="password" placeholder="session password" type="password" class="form-control" />
+						<button class="btn btn-default">Submit</button>
+						{% if error %}<p class="text-danger">{{error}}</p>{% endif %}
+					</div>
+				</div>
+			</form>
+		{% endif %}
+	</section>
 </body>
 </html>
