@@ -82,7 +82,7 @@
 								<td><span ng-if="!o.market_price">{{o.price}}</span><span ng-if="o.market_price">MP</span></td>
 								<td>{{o.qty}}</td>
 								<td>{{o.match}}</td>
-								<td>{{o.status}}</td>
+								<td>{{o.status}} <span ng-if="o.reason.length>0">-</span> {{o.reason}}</td>
 								<td><a href="#null" ng-click="cancelOrder(o)" ng-if="o.status=='Pending' && o.match<o.qty">cancel</a></td>
 							</tr>
 						</tbody>

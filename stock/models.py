@@ -153,6 +153,7 @@ class Order(models.Model):
     qty = models.PositiveIntegerField(default=0)
     match = models.PositiveIntegerField(default=0)
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=PENDING)
+    reason = models.CharField(max_length=50, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     
     objects = OrderManager()
@@ -185,7 +186,7 @@ class Order(models.Model):
         self.status = Order.CANCEL
         self.save()
 
-        Market.objects.get(stock=self.stock).update()
+        Market.objects.get(game=self.game, stock=self.stock).update()
             
     def reserve(self):
         myport = self.portfolio
@@ -271,6 +272,11 @@ class Order(models.Model):
                     
             if qty_pending == 0:
                 break;
+        
+        if self.market_price and qty_pending > 0:
+            self.cancel()
+            self.reason = 'No open bid/ask'
+            self.save()
         
         Market.objects.get(game=self.game, stock=self.stock).update()
 
@@ -387,6 +393,7 @@ class StockEncoder(JSONEncoder):
                         qty=obj.qty,
                         match=obj.match,
                         status=obj.get_status_display(),
+                        reason=obj.reason,
                         created=obj.created,
                         )
         elif isinstance(obj, Market):
