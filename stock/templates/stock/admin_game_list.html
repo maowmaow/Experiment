@@ -30,7 +30,8 @@
 		<div class="panel-heading">
 			<div class="pull-right">
 				<button class="btn btn-default" type="button" ng-click="deleteGame(game)" ng-if="game.state==GAME_END"><span class="glyphicon glyphicon-trash"></span></button>
-				<button class="btn btn-default" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
+				<button class="btn btn-default" type="button" ng-click="openMarketBoardTable(game)">Open Market (Tabular)</button>
+				<button class="btn btn-default" type="button" ng-click="openMarketBoard(game)">Open Market (Graph)</button>
 			</div>
 			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
 		</div>
@@ -171,6 +172,10 @@ stockApp.controller('gameController', ['$scope', '$window', '$interval', 'gameSv
 	
 	$scope.openMarketBoard = function(game) {
 		$window.open($scope.market_url + "/" + game.pk);
+	};
+	
+	$scope.openMarketBoardTable = function(game) {
+		$window.open($scope.market_url + "/" + game.pk + "/table");
 	};
 	
 	$scope.$watch('show_all', function(newValue) {

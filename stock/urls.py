@@ -8,6 +8,7 @@ urlpatterns = patterns('',
     
     url(r'^market$', MarketView.as_view(), name='market_base'),
     url(r'^market/(?P<game_pk>\d+)$', MarketView.as_view(), name='market'),
+    url(r'^market/(?P<game_pk>\d+)/table$', MarketTabularView.as_view(), name='market_tabular'),
     url(r'^market/(?P<game_pk>\d+)/(?P<stock>\w+)$', MarketScoreView.as_view(), name='market_score'),
     
     url(r'^client$', ClientView.as_view(), name='client'),

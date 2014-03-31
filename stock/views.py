@@ -14,6 +14,7 @@ from django.db import transaction, connection
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.db.utils import IntegrityError
+import datetime
 
 class IndexView(View):
     template_name = 'stock/index.html'
@@ -134,7 +135,10 @@ class MarketView(View):
 
     def get(self, request, game_pk):
         game = get_object_or_404(Game, pk=game_pk)
-        return render(request, self.template_name, {'game':game,'END':Game.END,'stock_list':json.dumps(Game.STOCK_LIST)})
+        return render(request, self.template_name, {'game':game,'END':Game.END,'stock_list':Game.STOCK_LIST,'stock_list_json':json.dumps(Game.STOCK_LIST)})
+
+class MarketTabularView(MarketView):
+    template_name = 'stock/market_tabular.html'
 
 class MarketApiView(View):
     def get(self, request, game_pk):
@@ -143,6 +147,7 @@ class MarketApiView(View):
         
         response = HttpResponse(json.dumps(market_list, cls=StockEncoder))
         response['game_state'] = game.state
+        response['time'] = datetime.datetime.now().isoformat()
         return response
 
 class MarketScoreView(View):

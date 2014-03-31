@@ -20,13 +20,8 @@
 		border-left-color: transparent;
 		border-right-color: transparent;
 	}
-	.graph {
-		height: 285px; 
-		width: 20%;
-	}
 </style>
 <script src="{% static 'js/jquery-2.1.0.min.js' %}"></script>
-<script src="{% static 'js/highstock.js' %}"></script>
 <script src="{% static 'js/angular.min.js' %}"></script>
 <script src="{% static 'js/angular-cookies.min.js' %}"></script>
 <script src="{% static 'js/angular-resource.min.js' %}"></script>
@@ -38,22 +33,24 @@
 	<h1 class="pull-left">Market Board - {{game_name}} <span class="label label-danger" ng-if="game_state==END">Game Ended</span></h1>
 	<h2 class="pull-right">Session Password: {{game_password}}</h2>
 	<table class="table table-bordered table-condensed">
-	<tbody>
+		<thead>
 			<tr>
-				<td class="graph" id="graphA"></td>
-				<td class="graph" id="graphB"></td>
-				<td class="graph" id="graphC"></td>
-				<td class="graph" id="graphD"></td>
-				<td class="graph" id="graphE"></td>
+				<th>Stock Name</th>
+				<th>Price</th>
+				<th>Cumulative volume</th>
+				<th>Bid</th>
+				<th>Ask</th>
 			</tr>
-			<tr>
-				<td class="graph" id="graphF"></td>
-				<td class="graph" id="graphG"></td>
-				<td class="graph" id="graphH"></td>
-				<td class="graph" id="graphI"></td>
-				<td class="graph" id="graphJ"></td>
+		</thead>
+		<tbody>
+			<tr ng-repeat="m in market_list track by m.pk" ng-controller="stockController">
+				<td>{{m.stock}}</td>
+				<td>{{m.price|currency}} <span ng-class="m.direction"></span></td>
+				<td>{{m.volume_total|number}}</td>
+				<td><span ng-if="m.bid>0">{{m.bid|currency}}</span><span ng-if="m.bid<=0">MP</span></td>
+				<td><span ng-if="m.ask>0">{{m.ask|currency}}</span><span ng-if="m.ask<=0">MP</span></td>
 			</tr>
-	</tbody>
+		</tbody>
 	</table>
 	<div class="panel panel-primary" ng-if="game_state==END">
 		<div class="panel-body">
@@ -70,7 +67,6 @@
 			</form>
 		</div>
 	</div>
-	<div id="graph" style="width:400px"></div>
 	{% endverbatim %}
 </section>
 <script>
@@ -91,27 +87,14 @@ stockApp.controller('marketController', ['$scope', '$window', '$interval', 'mark
 
 	$scope.loadData = function() {
 		marketSvc.query({ game_pk:{{game.pk}} }, function(value, responseHeaders) {
-			
-			$scope.game_state = responseHeaders('game_state');
-			var timeString = responseHeaders('time');
-			var time = new Date(timeString);
-			time = new Date( time.getTime() + ( time.getTimezoneOffset() * 60000 ) );
-			
 			for (var i=0; i<value.length; i++) {
 				if ($scope.market_list[i]) {
 					angular.extend($scope.market_list[i], value[i]);	
 				} else {
 					$scope.market_list[i] = value[i];
 				}
-				
-				var x = time.getTime();
-				var y = Number(value[i].price);
-				
-				if (graphData[value[i].stock]) {
-					graphData[value[i].stock].series[0].addPoint([x, y]);
-					graphData[value[i].stock].setTitle({text:'Stock ' + value[i].stock + ' - ' + y});
-				}
 			}
+			$scope.game_state = responseHeaders('game_state');
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
 		});
@@ -145,31 +128,6 @@ stockApp.controller('stockController', ['$scope', function($scope) {
 	});
 	
 }]);
-
-Highcharts.setOptions({
-	global : {
-		useUTC : false
-	}
-});
-
-var graphData = {};
-
-{% for s in stock_list %}
-$('#graph{{s}}').highcharts('StockChart', {
-	chart : { events : {
-			load : function() {
-				graphData['{{s}}'] = this;
-			}
-		}
-	},
-	xAxis: { range: 15 * 3600 * 1000 },
-    yAxis: { min: 0, minRange: 100 },
-	rangeSelector: { enabled: false },
-	title : { text : 'Stock {{s}}' },
-	exporting: { enabled: false },
-	series : [{ name : '{{s}}', data : [null] }]
-});
-{% endfor %}
 </script>
 </body>
 </html>
