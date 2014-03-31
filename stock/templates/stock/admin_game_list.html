@@ -72,6 +72,7 @@
 				</div>
 				<div class="col-md-3 text-right">
 					<p ng-if="game.state==GAME_READY"><button type="button" ng-click="startGame(game)" class="btn btn-lg btn-primary">Start Game</button></p>
+					<p ng-if="game.state==GAME_READY" class="text-warning">Please ensure that all users are connected before starting the game</p>
 					<p ng-if="game.state==GAME_RUNNING">Started on {{game.start|date:'h:mm:ss a'}}</p>
 					<p ng-if="game.state==GAME_RUNNING"><button type="button" ng-click="stopGame(game)" class="btn btn-lg btn-danger">End Game</button></p>
 					<p ng-if="game.state==GAME_END">

@@ -15,36 +15,55 @@
 <body ng-app="ultimatumApp">
 <section class="container" ng-controller="utClientController" ng-cloak>
 	{% verbatim %}
-	<h3 class="pull-right">Your current earning is {{earning}}.</h3>
-	<h1>Deal or No deal</h1>
-	<ul class="list-group">
-		<li class="list-group-item" ng-repeat="bid in bid_list track by $index">
-			<strong>Deal #{{$index + 1}}:</strong> Total money to share is {{bid.pot_size}}. Proposer offer to share {{bid.offer}}. 
-			<span class="label label-primary" ng-if="bid.accept===true">Accepted</span>
-			<span class="label label-danger" ng-if="bid.accept===false">Rejected</span>
-			
-			<span ng-if="role==RESPONDER && bid.accept==null">
-				Do you accept this offer?
-			</span>
-			<div class="btn-group" ng-if="role==RESPONDER && bid.accept==null">
-				<button type="button" class="btn btn-primary" ng-click="reply(bid,true)">Accept</button>
-				<button type="button" class="btn btn-danger" ng-click="reply(bid,false)">Reject</button>
+	<h1>Ultimatum game</h1>
+	<div class="row">
+		<div class="col-md-9">
+			<div class="panel panel-default" ng-if="role==PROPOSER">
+				<div class="panel-heading">
+					<h3 class="panel-title">Total money to share is ${{pot_size}}. How much do you offer to the responder?</h3>
+				</div>
+				<div class="panel-body">
+					<form class="form-inline" ng-submit="placeBid(offer)">
+						<fieldset ng-disabled="game_state!=RUNNING">
+							<label class="form-group">Offer
+								<input type="number" class="form-control" style="width:100px" ng-model="offer" min="0" max="{{pot_size}}" />
+							</label>
+							<button class="btn btn-default" ng-disabled="bid_pending">Submit</button>
+						</fieldset>
+					</form>
+				</div>
 			</div>
-		</li>
-	</ul>
-	<div class="panel panel-default" ng-if="role==PROPOSER">
-		<div class="panel-heading">
-			<h3 class="panel-title">Total money to share is {{pot_size}}. How much do you want to offer?</h3>
+			<div ng-if="game_state==READY" class="alert alert-warning">Please wait for the Administrator to start the game.</div>
+			<div ng-if="game_state==RUNNING && role==PROPOSER && bid_pending" class="alert alert-success">Please wait for the other player to response.</div>
+			<div ng-if="game_state==RUNNING && role==RESPONDER && !bid_pending" class="alert alert-success">Please wait for the other player to offer.</div>
+			<div ng-if="game_state==END" class="alert alert-danger">This game is already ended. <a class="btn btn-default" href="{{client_url}}">Exit game</a></div>
+			<ul class="list-group">
+				<li class="list-group-item" ng-repeat="bid in bid_list|reverse track by bid.pk">
+					<strong>Round #{{bid_list.length - $index}}:</strong> 
+					<span ng-if="role==PROPOSER">You offer to share ${{bid.offer}} out of ${{bid.pot_size}}.</span>
+					<span ng-if="role==RESPONDER">The proposer has offered to give you ${{bid.offer}} out of ${{bid.pot_size}}.</span> 
+					<span class="label label-primary" ng-if="bid.accept===true">Accepted</span>
+					<span class="label label-danger" ng-if="bid.accept===false">Rejected</span>
+					
+					<span ng-if="role==RESPONDER && bid.accept==null">
+						Do you accept this offer?
+					</span>
+					<div class="btn-group" ng-if="role==RESPONDER && bid.accept==null">
+						<button type="button" class="btn btn-primary" ng-click="reply(bid,true)">Accept</button>
+						<button type="button" class="btn btn-danger" ng-click="reply(bid,false)">Reject</button>
+					</div>
+				</li>
+			</ul>
 		</div>
-		<div class="panel-body">
-			<form class="form-inline" ng-submit="placeBid(offer)">
-				<fieldset ng-disabled="game_state!=RUNNING||bid_list.length>=game_iteration">
-					<label class="form-group">Offer
-						<input type="number" class="form-control" style="width:100px" ng-model="offer" min="0" max="{{pot_size}}" />
-					</label>
-					<button class="btn btn-default" ng-disabled="bid_pending">Submit</button>
-				</fieldset>
-			</form>
+		<div class="col-md-3">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h3 class="panel-title">Your total earning</h3>
+				</div>
+				<div class="panel-body text-center">
+					<h2>${{earning}}</h2>
+				</div>
+			</div>
 		</div>
 	</div>
 	{% endverbatim %}
@@ -63,9 +82,13 @@ ultimatumApp.controller('utClientController', ['$scope', '$http', '$interval', '
 	$scope.role = {{player.role}};
 	$scope.earning = 0;
 	
+	$scope.client_url = "{% url 'ultimatum:client' %}";
+	
 	$scope.PROPOSER = {{PROPOSER}};
 	$scope.RESPONDER = {{RESPONDER}};
+	$scope.READY = {{READY}};
 	$scope.RUNNING = {{RUNNING}};
+	$scope.END = {{END}};
 	
 	$scope.bid_pending = false;
 	
@@ -86,6 +109,13 @@ ultimatumApp.controller('utClientController', ['$scope', '$http', '$interval', '
 				}
 			}
 			$scope.earning = sum;
+			
+			if ($scope.bid_list.length >= $scope.game_iteration) {
+				$scope.game_state == $scope.END;
+			}
+			if ($scope.game_state == $scope.END) {
+				$interval.cancel($scope.loop_handle);
+			}
 		});
 	};
 	
@@ -101,7 +131,7 @@ ultimatumApp.controller('utClientController', ['$scope', '$http', '$interval', '
 		});
 	};
 	
-	$interval(function() { $scope.loadBid(); }, $scope.poll_rate);
+	$scope.loop_handle = $interval(function() { $scope.loadBid(); }, $scope.poll_rate);
 }]);
 </script>
 </body>

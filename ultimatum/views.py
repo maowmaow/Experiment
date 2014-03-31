@@ -178,10 +178,12 @@ class ClientGameView(View):
         player_id = request.session.get('player_id')
         if not player_id:
             return redirect('ultimatum:client')
-            
-        player = get_object_or_404(Player, pk=player_id)
         
-        return render(request, self.template_name, {'player':player,'PROPOSER':Player.PROPOSER,'RESPONDER':Player.RESPONDER, 'READY':Game.READY, 'RUNNING':Game.RUNNING, 'END':Game.END})
+        try:
+            player = Player.objects.get(pk=player_id)
+            return render(request, self.template_name, {'player':player,'PROPOSER':Player.PROPOSER,'RESPONDER':Player.RESPONDER, 'READY':Game.READY, 'RUNNING':Game.RUNNING, 'END':Game.END})
+        except Player.DoesNotExist:
+            return redirect('ultimatum:client')
 
 class ClientGameApiView(View):
     def get(self, request):
@@ -189,44 +191,49 @@ class ClientGameApiView(View):
         if not player_id:
             return redirect('ultimatum:client')
             
-        player = get_object_or_404(Player, pk=player_id)
-        
-        bid_list = Bid.objects.filter(game=player.game, pair_no=player.pair_no)
-
-        response = HttpResponse(json.dumps(list(bid_list), cls=UltimatumEncoder))
-        response['game_state'] = player.game.state
-        return response
+        try:
+            player = Player.objects.get(pk=player_id)
+            bid_list = Bid.objects.filter(game=player.game, pair_no=player.pair_no)
+    
+            response = HttpResponse(json.dumps(list(bid_list), cls=UltimatumEncoder))
+            response['game_state'] = player.game.state
+            return response
+        except Player.DoesNotExist:
+            return redirect('ultimatum:client')
     
     def post(self, request):
         player_id = request.session.get('player_id')
         if not player_id:
             return redirect('ultimatum:client')
             
-        player = get_object_or_404(Player, pk=player_id)
+        try:
+            player = Player.objects.get(pk=player_id)
         
-        if player.role != Player.PROPOSER:
-            return HttpResponseForbidden()
-        
-        last_bid = Bid.objects.filter(game=player.game, pair_no=player.pair_no, accept__isnull=True)
-        if len(last_bid) != 0:
-            return HttpResponseBadRequest() # user must wait for Responder to response
-        
-        bid_count = Bid.objects.filter(game=player.game, pair_no=player.pair_no).count()
-        if bid_count >= player.game.iteration:
-            return HttpResponseBadRequest() # number of iteration is fulfilled
-        
-        data = json.loads(request.body)
-        offer = data['offer']
-        if 0 <= offer and offer <= player.game.pot_size:
-            bid = Bid()
-            bid.game = player.game
-            bid.pair_no = player.pair_no
-            bid.pot_size = player.game.pot_size
-            bid.offer = offer
-            bid.save()
-            return HttpResponse('success')  
-        else:
-            return HttpResponseBadRequest()
+            if player.role != Player.PROPOSER:
+                return HttpResponseForbidden()
+            
+            last_bid = Bid.objects.filter(game=player.game, pair_no=player.pair_no, accept__isnull=True)
+            if len(last_bid) != 0:
+                return HttpResponseBadRequest() # user must wait for Responder to response
+            
+            bid_count = Bid.objects.filter(game=player.game, pair_no=player.pair_no).count()
+            if bid_count >= player.game.iteration:
+                return HttpResponseBadRequest() # number of iteration is fulfilled
+            
+            data = json.loads(request.body)
+            offer = data['offer']
+            if 0 <= offer and offer <= player.game.pot_size:
+                bid = Bid()
+                bid.game = player.game
+                bid.pair_no = player.pair_no
+                bid.pot_size = player.game.pot_size
+                bid.offer = offer
+                bid.save()
+                return HttpResponse('success')  
+            else:
+                return HttpResponseBadRequest()
+        except Player.DoesNotExist:
+            return redirect('ultimatum:client')
 
 class ClientReplyApiView(View):
     def post(self, request, bid_pk):
@@ -234,19 +241,23 @@ class ClientReplyApiView(View):
         if not player_id:
             return redirect('ultimatum:client')
             
-        player = get_object_or_404(Player, pk=player_id)
+        try:
+            player = Player.objects.get(pk=player_id)
         
-        if player.role != Player.RESPONDER:
-            return HttpResponseForbidden()
-        
-        bid = get_object_or_404(Bid, pk=bid_pk)
-        
-        if bid.pair_no != player.pair_no:
-            return HttpResponseForbidden()
-        
-        if bid.accept is not None:
-            return HttpResponseBadRequest()
-        
-        data = json.loads(request.body)
-        bid.accept = data['accept']
-        bid.save()
+            if player.role != Player.RESPONDER:
+                return HttpResponseForbidden()
+            
+            bid = get_object_or_404(Bid, pk=bid_pk)
+            
+            if bid.pair_no != player.pair_no:
+                return HttpResponseForbidden()
+            
+            if bid.accept is not None:
+                return HttpResponseBadRequest()
+            
+            data = json.loads(request.body)
+            bid.accept = data['accept']
+            bid.save()
+            return HttpResponse('success')  
+        except Player.DoesNotExist:
+            return redirect('ultimatum:client')

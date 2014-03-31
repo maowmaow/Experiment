@@ -1,6 +1,12 @@
 
 var ultimatumApp = angular.module('ultimatumApp', ['ngCookies','ngResource']);
 
+ultimatumApp.filter('reverse', function() {
+  return function(items) {
+    return items.slice().reverse();
+  };
+});
+
 ultimatumApp.config(function($httpProvider) {
 	$httpProvider.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 });

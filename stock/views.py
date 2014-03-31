@@ -217,9 +217,12 @@ class ClientPortfolioView(View):
         portfolio_id = request.session.get('portfolio_id')
         if not portfolio_id:
             return redirect('stock:client')
-            
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
-        return render(request, self.template_name, { 'portfolio':portfolio, 'stock_list':json.dumps(Game.STOCK_LIST), 'END':Game.END })
+        
+        try:
+            portfolio = Portfolio.objects.get(pk=portfolio_id)
+            return render(request, self.template_name, { 'portfolio':portfolio, 'stock_list':json.dumps(Game.STOCK_LIST), 'END':Game.END })
+        except Portfolio.DoesNotExist:
+            return redirect('stock:client')
 
 class ClientPortfolioApiView(View):
     def get(self, request):
@@ -227,30 +230,36 @@ class ClientPortfolioApiView(View):
         if not portfolio_id:
             return redirect('stock:client')
         
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
-        return HttpResponse(json.dumps(portfolio, cls=StockEncoder))
+        try:
+            portfolio = Portfolio.objects.get(pk=portfolio_id)
+            return HttpResponse(json.dumps(portfolio, cls=StockEncoder))
+        except Portfolio.DoesNotExist:
+            return redirect('stock:client')
 
     def post(self, request):
         portfolio_id = request.session.get('portfolio_id')
         if not portfolio_id:
             return redirect('stock:client')
         
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
-        data = json.loads(request.body)
         try:
-            order = Order()
-            order.game = portfolio.game
-            order.portfolio = portfolio
-            order.type = Order.parse_type(data['type'])
-            order.stock = data['stock']
-            order.price = Decimal(data['price']) if not data['market_price'] else 0
-            order.market_price = Decimal(data['market_price'])
-            order.qty = data['qty']
-            order.place_order()
-        except GameException as e:
-            return HttpResponseBadRequest(e.message)
-
-        return HttpResponse('success')
+            portfolio = Portfolio.objects.get(pk=portfolio_id)
+            data = json.loads(request.body)
+            try:
+                order = Order()
+                order.game = portfolio.game
+                order.portfolio = portfolio
+                order.type = Order.parse_type(data['type'])
+                order.stock = data['stock']
+                order.price = Decimal(data['price']) if not data['market_price'] else 0
+                order.market_price = Decimal(data['market_price'])
+                order.qty = data['qty']
+                order.place_order()
+            except GameException as e:
+                return HttpResponseBadRequest(e.message)
+    
+            return HttpResponse('success')
+        except Portfolio.DoesNotExist:
+                return redirect('stock:client')
 
 class ClientPortfolioCancelApiView(View):
     
@@ -258,10 +267,13 @@ class ClientPortfolioCancelApiView(View):
         portfolio_id = request.session.get('portfolio_id')
         if not portfolio_id:
             return redirect('stock:client')
-        portfolio = get_object_or_404(Portfolio, pk=portfolio_id)
+        try:
+            portfolio = Portfolio.objects.get(pk=portfolio_id)
         
-        order = Order.objects.get(pk=order_pk)
-        if order.portfolio == portfolio:
-            order.cancel()
-
-        return HttpResponse('success')
+            order = Order.objects.get(pk=order_pk)
+            if order.portfolio == portfolio:
+                order.cancel()
+    
+            return HttpResponse('success')
+        except Portfolio.DoesNotExist:
+                return redirect('stock:client')
