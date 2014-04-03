@@ -1,12 +1,6 @@
 
 var ultimatumApp = angular.module('ultimatumApp', ['ngCookies','ngResource']);
 
-ultimatumApp.filter('reverse', function() {
-  return function(items) {
-    return items.slice().reverse();
-  };
-});
-
 ultimatumApp.config(function($httpProvider) {
 	$httpProvider.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 });
@@ -23,3 +17,12 @@ ultimatumApp.factory('gameSvc', ['$resource', function($resource) {
 ultimatumApp.factory('clientSvc', ['$resource', function($resource) {
 	return $resource('/ultimatum/api/client/:bid_pk');
 }]);
+
+ultimatumApp.factory('summarySvc', ['$resource', function($resource) {
+	return $resource('/ultimatum/api/summary/:game_pk');
+}]);
+
+ultimatumApp.factory('scoreSvc', ['$resource', function($resource) {
+	return $resource('/ultimatum/api/score/:game_pk');
+}]);
+

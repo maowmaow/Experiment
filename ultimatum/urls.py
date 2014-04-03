@@ -23,4 +23,11 @@ urlpatterns = patterns('',
     url(r'^api/client$', ClientGameApiView.as_view(), name='api_client_game'),
     url(r'^api/client/(?P<bid_pk>\d+)$', ClientReplyApiView.as_view(), name='api_client_reply'),
     
+    url(r'^summary$', SummaryView.as_view(), name='summary_base'),
+    url(r'^summary/(?P<game_pk>\d+)$', SummaryView.as_view(), name='summary'),
+    url(r'^api/summary/(?P<game_pk>\d+)$', SummaryApiView.as_view(), name='api_summary'),
+    
+    url(r'^score$', ScoreView.as_view(), name='score_base'),
+    url(r'^score/(?P<game_pk>\d+)$', ScoreView.as_view(), name='score'),
+    url(r'^api/score/(?P<game_pk>\d+)$', ScoreApiView.as_view(), name='api_score'),
 )

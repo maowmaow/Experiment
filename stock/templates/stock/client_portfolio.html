@@ -16,6 +16,7 @@
 <section class="container" ng-controller="stockClientController">
 	<h1>Portfolio: {{portfolio.name}}</h1>
 	{% verbatim %}
+	<div class="alert alert-warning" ng-if="game_state==GAME_READY" >Please wait for the Administrator to start the game.</div>
 	<div class="alert alert-danger" ng-if="game_state==GAME_END">This game is already ended. <a class="btn btn-default" href="{{client_url}}">Exit game</a></div>
 	<div class="alert alert-danger" ng-if="error">{{error}}</div>
 	<div class="row">
@@ -124,6 +125,7 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 
 	$scope.poll_rate = 2000;
 	$scope.stock_list = {{stock_list|safe}};
+	$scope.GAME_READY = {{READY|safe}};
 	$scope.GAME_END = {{END|safe}};
 	$scope.client_url = "{% url 'stock:client' %}";
 	
@@ -145,6 +147,10 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 			$scope.order_list = value.order;
 			$scope.details_list = value.details;
 			$scope.game_state = value.game_state;
+			
+			if ($scope.game_state == $scope.GAME_END) {
+				$interval.cancel($scope.loop_handle);
+			}
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
 		});
@@ -167,7 +173,7 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 		});
 	}
 	
-	$interval(function() { $scope.loadData(); }, $scope.poll_rate);
+	$scope.loop_handle = $interval(function() { $scope.loadData(); }, $scope.poll_rate);
 }]);
 </script>
 </body>

@@ -122,7 +122,40 @@ class AdminGameApiView(View):
             return HttpResponseBadRequest()
         
         return HttpResponse('success')
+
+class SummaryView(View):
+    template_name = 'ultimatum/summary.html'
+    
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
+        return render(request, self.template_name, {'game':game,'END':Game.END,})
+
+class SummaryApiView(View):
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
         
+        summary_list = list(Bid.objects.get_summary_offer(game))
+        
+        response = HttpResponse(json.dumps(summary_list, cls=UltimatumEncoder))
+        response['game_state'] = game.state
+        return response
+
+class ScoreView(View):
+    template_name = 'ultimatum/score.html'
+    
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
+        return render(request, self.template_name, {'game':game,'END':Game.END,})
+
+class ScoreApiView(View):
+    def get(self, request, game_pk):
+        game = get_object_or_404(Game, pk=game_pk)
+        
+        score_list = list(Player.objects.get_score(game))
+        
+        response = HttpResponse(json.dumps(score_list, cls=UltimatumEncoder))
+        response['game_state'] = game.state
+        return response
 
 class ClientView(View):
     template_name = 'ultimatum/client.html'

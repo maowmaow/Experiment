@@ -220,7 +220,7 @@ class ClientPortfolioView(View):
         
         try:
             portfolio = Portfolio.objects.get(pk=portfolio_id)
-            return render(request, self.template_name, { 'portfolio':portfolio, 'stock_list':json.dumps(Game.STOCK_LIST), 'END':Game.END })
+            return render(request, self.template_name, { 'portfolio':portfolio, 'stock_list':json.dumps(Game.STOCK_LIST), 'READY':Game.READY, 'END':Game.END })
         except Portfolio.DoesNotExist:
             return redirect('stock:client')
 

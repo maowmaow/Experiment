@@ -30,7 +30,8 @@
 		<div class="panel-heading">
 			<div class="pull-right">
 				<button class="btn btn-default" type="button" ng-click="deleteGame(game)" ng-if="game.state==GAME_END"><span class="glyphicon glyphicon-trash"></span></button>
-				<button class="btn btn-default" type="button" ng-click="openMarketBoard(game)">Open Market Board</button>
+				<button class="btn btn-default" type="button" ng-click="openSummaryBoard(game)">Open Summary Board</button>
+				<button class="btn btn-default" type="button" ng-click="openScoreBoard(game)">Open Score Board</button>
 			</div>
 			<h4>Game Settings: {{game.name}} <small><a href="{{game_url}}/{{game.pk}}/edit" ng-if="game.state==GAME_READY">Edit</a></small></h4>
 		</div>
@@ -90,7 +91,8 @@ ultimatumApp.controller('gameController', ['$scope', '$window', '$interval', 'ga
 	
 	$scope.poll_rate = 2000;
 	
-	$scope.market_url = '{% url "stock:market_base" %}';
+	$scope.summary_url = '{% url "ultimatum:summary_base" %}';
+	$scope.score_url = '{% url "ultimatum:score_base" %}';
 	$scope.game_url = '{% url "ultimatum:admin_game_list" %}';
 	$scope.GAME_READY = {{READY}};
 	$scope.GAME_RUNNING = {{RUNNING}};
@@ -158,8 +160,12 @@ ultimatumApp.controller('gameController', ['$scope', '$window', '$interval', 'ga
 		});
 	};
 	
-	$scope.openMarketBoard = function(game) {
-		$window.open($scope.market_url + "/" + game.pk);
+	$scope.openScoreBoard = function(game) {
+		$window.open($scope.score_url + "/" + game.pk);
+	};
+	
+	$scope.openSummaryBoard = function(game) {
+		$window.open($scope.summary_url + "/" + game.pk);
 	};
 	
 	$scope.$watch('show_all', function(newValue) {

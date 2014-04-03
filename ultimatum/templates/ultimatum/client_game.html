@@ -38,8 +38,8 @@
 			<div ng-if="game_state==RUNNING && role==RESPONDER && !bid_pending" class="alert alert-success">Please wait for the other player to offer.</div>
 			<div ng-if="game_state==END" class="alert alert-danger">This game is already ended. <a class="btn btn-default" href="{{client_url}}">Exit game</a></div>
 			<ul class="list-group">
-				<li class="list-group-item" ng-repeat="bid in bid_list|reverse track by bid.pk">
-					<strong>Round #{{bid_list.length - $index}}:</strong> 
+				<li class="list-group-item" ng-repeat="bid in bid_list|orderBy:'-iteration' track by bid.pk">
+					<strong>Round #{{bid.iteration}}:</strong> 
 					<span ng-if="role==PROPOSER">You offer to share ${{bid.offer}} out of ${{bid.pot_size}}.</span>
 					<span ng-if="role==RESPONDER">The proposer has offered to give you ${{bid.offer}} out of ${{bid.pot_size}}.</span> 
 					<span class="label label-primary" ng-if="bid.accept===true">Accepted</span>
