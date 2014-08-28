@@ -2,6 +2,8 @@
 import os
 import sys
 
+SUB_SITE = 'designforinstinctsgames'
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -13,13 +15,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django_postgrespool', 
-        'NAME': 'experiment',            # Or path to database file if using sqlite3.
-        # The following settings are not used with sqlite3:
-        'USER': 'experiment_app',
-        'PASSWORD': 'experiment_app',
-        'HOST': '',                      # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
-        'PORT': '',                      # Set to empty string for default.
+        'ENGINE': 'django_mysqlpool.backends.mysqlpool',
+        'NAME': 'web_ds4instgames',
+        'USER': 'web_ds4instgames',
+        'PASSWORD': 'dj0614gme',
+        'HOST': 'ldvdbamydv01.itap.purdue.edu', 
+        'PORT': '3306',
     }
 }
 
@@ -76,7 +77,7 @@ STATIC_ROOT = 'c:/Apache24/htdocs/static/'
 
 # URL prefix for static files.
 # Example: "http://example.com/static/", "http://static.example.com/"
-STATIC_URL = '/static/'
+STATIC_URL = '/' + SUB_SITE + '/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (

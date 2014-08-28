@@ -11,13 +11,13 @@ stockApp.run(function($http, $cookies) {
 });
 
 stockApp.factory('gameSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/admin/game/:game_pk/:action');
+	return $resource('/designforinstinctsgames/stock/api/admin/game/:game_pk/:action');
 }]);
 
 stockApp.factory('marketSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/market/:game_pk');
+	return $resource('/designforinstinctsgames/stock/api/market/:game_pk');
 }]);
 
 stockApp.factory('clientSvc', ['$resource', function($resource) {
-	return $resource('/stock/api/client/portfolio/:order_pk');
+	return $resource('/designforinstinctsgames/stock/api/client/portfolio/:order_pk');
 }]);

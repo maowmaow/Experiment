@@ -17,11 +17,13 @@ import sys
 import os
 import site
 
-site.addsitedir('d:/Python/purdue/Lib/site-packages')
-#site.addsitedir('/opt/python/env/designforinstinctsgames/lib/python2.6/site-packages')
+# site.addsitedir('d:/Python/purdue/Lib/site-packages')
+site.addsitedir('/usr/lib64/python2.6/site-packages')
+site.addsitedir('/usr/lib/python2.6/site-packages')
+site.addsitedir('/opt/python/env/designforinstinctsgames/lib/python2.6/site-packages')
 
-path = 'c:/Apache24/Apps/dsgames'
-#path = '/var/www/data/root/designforinstinctsgames/apache'
+# path = 'c:/Apache24/Apps/Experiment'
+path = '/var/www/data/root/designforinstinctsgames/apache'
 if path not in sys.path:
     sys.path.append(path)
 
@@ -34,3 +36,4 @@ def application(environ, start_response):
     environ['PATH_INFO'] = environ['SCRIPT_NAME'] + environ['PATH_INFO']
     environ['SCRIPT_NAME'] = '' # my little addition to make it work
     return _application(environ, start_response)
+

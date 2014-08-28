@@ -76,7 +76,7 @@
 						</thead>
 						<tbody>
 							<tr ng-repeat="o in order_list track by o.pk">
-								<td>{{$index+1}}</td>
+								<td>{{order_list.length - $index}}</td>
 								<td>{{o.created|date:'HH:mm:ss'}}</td>
 								<td>{{o.stock}}</td>
 								<td>{{o.type}}</td>
@@ -144,7 +144,7 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 		clientSvc.get(null, function(value) {
 			$scope.cash = value.cash;
 			$scope.cash_available = value.cash_available;
-			$scope.order_list = value.order;
+			$scope.order_list = value.order.reverse();
 			$scope.details_list = value.details;
 			$scope.game_state = value.game_state;
 			
@@ -161,7 +161,7 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 			$scope.loadData();
 		}, function(httpResponse) {
 			console.log(httpResponse);
-			//$scope.error = httpResponse.data;
+			$scope.error = httpResponse.data;
 		});
 	}
 	

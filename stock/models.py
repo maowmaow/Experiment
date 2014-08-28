@@ -141,7 +141,7 @@ class Order(models.Model):
     CANCEL = 3
     STATUS_CHOICES = ((PENDING, 'Pending'), (COMPLETE, 'Completed'), (CANCEL, 'Canceled'))
     
-    MP_RESERVE_RATE = 1.2
+    MP_RESERVE_RATE = '1.2'
     
     game = models.ForeignKey(Game)
     portfolio = models.ForeignKey(Portfolio)

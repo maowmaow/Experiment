@@ -11,18 +11,18 @@ ultimatumApp.run(function($http, $cookies) {
 });
 
 ultimatumApp.factory('gameSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/admin/game/:game_pk/:action');
+	return $resource('/designforinstinctsgames/ultimatum/api/admin/game/:game_pk/:action');
 }]);
 
 ultimatumApp.factory('clientSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/client/:bid_pk');
+	return $resource('/designforinstinctsgames/ultimatum/api/client/:bid_pk');
 }]);
 
 ultimatumApp.factory('summarySvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/summary/:game_pk');
+	return $resource('/designforinstinctsgames/ultimatum/api/summary/:game_pk');
 }]);
 
 ultimatumApp.factory('scoreSvc', ['$resource', function($resource) {
-	return $resource('/ultimatum/api/score/:game_pk');
+	return $resource('/designforinstinctsgames/ultimatum/api/score/:game_pk');
 }]);
 
