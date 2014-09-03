@@ -11,6 +11,9 @@
 <script src="{% static 'js/angular-cookies.min.js' %}"></script>
 <script src="{% static 'js/angular-resource.min.js' %}"></script>
 <script src="{% static 'stock/js/app-stock.js' %}"></script>
+<style>
+.panel .ds-panel-sub td { padding-top: 2px; padding-bottom: 2px; background: #efefef; }
+</style>
 </head>
 <body ng-app="stockApp">
 <section class="container" ng-controller="stockClientController">
@@ -80,7 +83,7 @@
 								<td>{{o.created|date:'HH:mm:ss'}}</td>
 								<td>{{o.stock}}</td>
 								<td>{{o.type}}</td>
-								<td><span ng-if="!o.market_price">{{o.price}}</span><span ng-if="o.market_price">MP</span></td>
+								<td><span ng-if="!o.market_price">{{o.price}}</span><span ng-if="o.market_price">MP</span> {{o.tx_price}}</td>
 								<td>{{o.qty}}</td>
 								<td>{{o.match}}</td>
 								<td>{{o.status}} <span ng-if="o.reason.length>0">-</span> {{o.reason}}</td>
@@ -121,7 +124,7 @@
 	
 </footer>
 <script>
-stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$interval', 'clientSvc', function($scope, $http, $window, $interval, clientSvc) {
+stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$interval', '$timeout', 'clientSvc', function($scope, $http, $window, $interval, $timeout, clientSvc) {
 
 	$scope.poll_rate = 2000;
 	$scope.stock_list = {{stock_list|safe}};
@@ -144,7 +147,19 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 		clientSvc.get(null, function(value) {
 			$scope.cash = value.cash;
 			$scope.cash_available = value.cash_available;
+			
 			$scope.order_list = value.order.reverse();
+			
+			angular.forEach($scope.order_list, function(order, index) {
+				if (order.transaction.length == 0) return;
+				
+				var match_price = [];
+				angular.forEach(order.transaction, function(tx, index) {
+					match_price.push(tx.price);
+				});
+				order.tx_price = '(' + match_price.join() + ')'; 
+			});
+			
 			$scope.details_list = value.details;
 			$scope.game_state = value.game_state;
 			
@@ -153,6 +168,9 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 			}
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
+			$timeout(function() {
+				$scope.error = '';
+			}, 10000);
 		});
 	}
 	
@@ -162,6 +180,9 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 		}, function(httpResponse) {
 			console.log(httpResponse);
 			$scope.error = httpResponse.data;
+			$timeout(function() {
+				$scope.error = '';
+			}, 10000);
 		});
 	}
 	
@@ -170,6 +191,9 @@ stockApp.controller('stockClientController', ['$scope', '$http', '$window', '$in
 			$scope.loadData();
 		}, function(httpResponse) {
 			$scope.error = httpResponse.data;
+			$timeout(function() {
+				$scope.error = '';
+			}, 10000);
 		});
 	}
 	

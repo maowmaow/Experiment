@@ -395,6 +395,12 @@ class StockEncoder(JSONEncoder):
                         status=obj.get_status_display(),
                         reason=obj.reason,
                         created=obj.created,
+                        transaction = list(Transaction.objects.filter(Q(seller=obj) | Q(buyer=obj)))
+                        )
+        elif isinstance(obj, Transaction):
+            return dict(pk=obj.pk,
+                        price=str(obj.price),
+                        qty=obj.qty,
                         )
         elif isinstance(obj, Market):
             return dict(pk=obj.pk,
